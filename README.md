@@ -79,7 +79,13 @@ Child devices ──HTTPS + SignalR (device token)──────┘
 
 Requirements: [.NET SDK 10](https://dotnet.microsoft.com/download) and [Node.js](https://nodejs.org/) 22 or newer. Docker is only needed to try the self-hosting setup.
 
-Build and test commands will be added here as each part is built.
+Build and run the tests:
+
+```bash
+dotnet test ScreenTime.slnx
+```
+
+More commands will be added here as each part is built.
 
 ## Contributing
 
