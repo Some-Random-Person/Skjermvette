@@ -65,7 +65,7 @@ Child devices ──HTTPS + SignalR (device token)──────┘
 | `web/` | Parent dashboard (React + Vite) |
 | `tests/` | xUnit tests for Core and Server |
 | `tools/FakeDevice` | Simulates a second device for testing across devices |
-| `deploy/` | `docker-compose.yml` (server, Postgres, Caddy) for self-hosting |
+| `deploy/` | `docker-compose.yml` (server, Postgres) for self-hosting, exposed through a Cloudflare Tunnel |
 
 ## Roadmap
 
