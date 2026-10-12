@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { api } from "../api/client";
 import { matcherKinds, type App, type MatcherKind, type UnassignedIdentifier } from "../api/types";
 import { ErrorText } from "../components/ErrorText";
+import { useConfirm } from "../confirm/useConfirm";
 import { formatDate, formatMinutes } from "../format";
 import { t } from "../i18n/t";
 import { useLoad } from "../useLoad";
@@ -120,6 +121,7 @@ function AddApp({ run }: { run: Run }) {
 function AppCard({ app, run }: { app: App; run: Run }) {
   const [kind, setKind] = useState<MatcherKind>("Process");
   const [value, setValue] = useState("");
+  const confirm = useConfirm();
 
   const add = async (e: FormEvent) => {
     e.preventDefault();
@@ -127,8 +129,14 @@ function AppCard({ app, run }: { app: App; run: Run }) {
     setValue("");
   };
 
-  const remove = () => {
-    if (confirm(t("apps.deleteConfirm", { name: app.name }))) void run(() => api.deleteApp(app.id));
+  const remove = async () => {
+    const confirmed = await confirm({
+      title: t("apps.deleteTitle", { name: app.name }),
+      message: t("apps.deleteConfirm"),
+      confirmLabel: t("apps.deleteApp"),
+      danger: true,
+    });
+    if (confirmed) await run(() => api.deleteApp(app.id));
   };
 
   return (
@@ -177,7 +185,7 @@ function AppCard({ app, run }: { app: App; run: Run }) {
         />
         <button>{t("apps.addIdentifier")}</button>
         {!app.isBuiltIn && (
-          <button type="button" className="link danger" onClick={remove}>
+          <button type="button" className="link danger" onClick={() => void remove()}>
             {t("apps.deleteApp")}
           </button>
         )}
