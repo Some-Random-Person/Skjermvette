@@ -4,7 +4,7 @@ namespace ScreenTime.Core.Models;
 public sealed record Policy(
     TimeSpan DailyTotal,
     IReadOnlyDictionary<Guid, TimeSpan> AppLimits,
-    IReadOnlySet<Guid> ExemptAppIds,
+    IReadOnlyCollection<Guid> ExemptAppIds,
     TimeSpan OfflineAllowance,
     string TimeZoneId,
     int ResetHour)
