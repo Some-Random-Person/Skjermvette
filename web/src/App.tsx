@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router";
 import { AuthProvider } from "./auth/AuthContext";
 import { useAuth } from "./auth/useAuth";
+import { ConfirmProvider } from "./confirm/ConfirmProvider";
 import { Layout } from "./components/Layout";
 import { t } from "./i18n/t";
 import { AppsPage } from "./pages/AppsPage";
@@ -21,25 +22,27 @@ function RequireSignIn() {
 export function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route element={<RequireSignIn />}>
-            <Route element={<Layout />}>
-              <Route index element={<ChildrenPage />} />
-              <Route path="children/new" element={<NewChildPage />} />
-              <Route path="children/:id" element={<ChildPage />}>
-                <Route index element={<Navigate to="today" replace />} />
-                <Route path="today" element={<TodayTab />} />
-                <Route path="rules" element={<RulesTab />} />
-                <Route path="devices" element={<DevicesTab />} />
+      <ConfirmProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route element={<RequireSignIn />}>
+              <Route element={<Layout />}>
+                <Route index element={<ChildrenPage />} />
+                <Route path="children/new" element={<NewChildPage />} />
+                <Route path="children/:id" element={<ChildPage />}>
+                  <Route index element={<Navigate to="today" replace />} />
+                  <Route path="today" element={<TodayTab />} />
+                  <Route path="rules" element={<RulesTab />} />
+                  <Route path="devices" element={<DevicesTab />} />
+                </Route>
+                <Route path="apps" element={<AppsPage />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
               </Route>
-              <Route path="apps" element={<AppsPage />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
-          </Route>
-        </Routes>
-      </BrowserRouter>
+          </Routes>
+        </BrowserRouter>
+      </ConfirmProvider>
     </AuthProvider>
   );
 }

@@ -1,15 +1,23 @@
 import { useNavigate } from "react-router";
 import { api } from "../api/client";
 import { ChildForm } from "../components/ChildForm";
+import { useConfirm } from "../confirm/useConfirm";
 import { t } from "../i18n/t";
 import { useChild } from "./ChildPage";
 
 export function RulesTab() {
   const { child, reloadChild } = useChild();
   const navigate = useNavigate();
+  const confirm = useConfirm();
 
   const remove = async () => {
-    if (!confirm(t("rules.deleteConfirm", { name: child.name }))) return;
+    const confirmed = await confirm({
+      title: t("rules.deleteTitle", { name: child.name }),
+      message: t("rules.deleteConfirm", { name: child.name }),
+      confirmLabel: t("rules.deleteChild"),
+      danger: true,
+    });
+    if (!confirmed) return;
     await api.deleteChild(child.id);
     navigate("/");
   };

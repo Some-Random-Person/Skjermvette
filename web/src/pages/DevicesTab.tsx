@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { api } from "../api/client";
 import type { Device, PairingCode } from "../api/types";
 import { ErrorText } from "../components/ErrorText";
+import { useConfirm } from "../confirm/useConfirm";
 import { formatDate, formatMinutes, formatTime } from "../format";
 import { t } from "../i18n/t";
 import { useLoad } from "../useLoad";
@@ -80,6 +81,7 @@ function DeviceSettings({ device, childName, childAllowance, onChanged }: Device
   const [override, setOverride] = useState<number | null>(device.offlineAllowanceOverrideMinutes);
   const [error, setError] = useState<string>();
   const [saved, setSaved] = useState(false);
+  const confirm = useConfirm();
 
   const save = async (e: FormEvent) => {
     e.preventDefault();
@@ -94,7 +96,13 @@ function DeviceSettings({ device, childName, childAllowance, onChanged }: Device
   };
 
   const unpair = async () => {
-    if (!confirm(t("devices.unpairConfirm", { device: device.name }))) return;
+    const confirmed = await confirm({
+      title: t("devices.unpairTitle", { device: device.name }),
+      message: t("devices.unpairConfirm"),
+      confirmLabel: t("devices.unpair"),
+      danger: true,
+    });
+    if (!confirmed) return;
     try {
       await api.unpairDevice(device.id);
       await onChanged();
