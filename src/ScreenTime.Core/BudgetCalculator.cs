@@ -27,14 +27,14 @@ public static class BudgetCalculator
     /// <summary>
     /// The budget of a device that is offline: only its own lease, spent by what it used since the lease was granted.
     /// </summary>
-    public static BudgetSnapshot CalculateOffline(Lease lease, IReadOnlySet<Guid> exemptAppIds, IEnumerable<UsageEvent> offlineEvents) =>
+    public static BudgetSnapshot CalculateOffline(Lease lease, IReadOnlyCollection<Guid> exemptAppIds, IEnumerable<UsageEvent> offlineEvents) =>
         Build(lease.Total, lease.Apps, exemptAppIds, new TimeWindow(lease.GrantedAt, lease.ExpiresAt), offlineEvents,
             TimeSpan.Zero, new Dictionary<Guid, TimeSpan>());
 
     private static BudgetSnapshot Build(
         TimeSpan totalLimit,
         IReadOnlyDictionary<Guid, TimeSpan> appLimits,
-        IReadOnlySet<Guid> exemptAppIds,
+        IReadOnlyCollection<Guid> exemptAppIds,
         TimeWindow window,
         IEnumerable<UsageEvent> events,
         TimeSpan reservedTotal,

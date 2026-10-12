@@ -1,8 +1,10 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/ScreenTime.Core/ScreenTime.Core.csproj" />
+    <Project Path="src/ScreenTime.Server/ScreenTime.Server.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/ScreenTime.Core.Tests/ScreenTime.Core.Tests.csproj" />
+    <Project Path="tests/ScreenTime.Server.Tests/ScreenTime.Server.Tests.csproj" />
   </Folder>
 </Solution>

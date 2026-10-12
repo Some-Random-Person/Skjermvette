@@ -9,7 +9,7 @@ public sealed record BudgetSnapshot(
     TimeSpan TotalUsed,
     TimeSpan TotalReserved,
     IReadOnlyList<AppBudget> Apps,
-    IReadOnlySet<Guid> ExemptAppIds)
+    IReadOnlyCollection<Guid> ExemptAppIds)
 {
     public TimeSpan TotalRemaining => AppBudget.Clamp(TotalLimit - TotalUsed - TotalReserved);
 

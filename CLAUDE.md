@@ -110,6 +110,19 @@ Project root: `C:\dev\Test`. Remote: `github.com/Some-Random-Person/ScreenTimeMa
 - **Database:**
   - EF Core code-first with migrations.
   - SQLite in development and tests, Postgres in production.
+  - Migrations are generated for Postgres only (`PostgresDesignTimeFactory`) and applied at startup. The SQLite development and test database is created from the model with `EnsureCreated`, so delete `screentime.dev.db` after model changes.
+  - Add a migration: `dotnet ef migrations add <Name> --project src/ScreenTime.Server --output-dir Data/Migrations`. `dotnet-ef` is a local tool (`dotnet tool restore`).
+  - All `DateTime`s are UTC (`...Utc` names). SQLite can't compare `DateTimeOffset` in queries, so entities use `DateTime`.
+- **DI:**
+  - Built-in DI. The DbContext is registered with `AddDbContext`, which makes it scoped.
+  - Anything that uses the DbContext is `AddScoped`, never a singleton. Background jobs create their own scope.
+- **Config:**
+  - Production: environment variables only (`ConnectionStrings__DefaultConnection`, `Database__Provider` = `Sqlite` | `Postgres`). Fail fast at startup if either is missing.
+  - A gitignored `.env` holds production values, and `.env.example` is committed.
+  - Development: `appsettings.Development.json` points at a local SQLite file, so `dotnet run` works without a `.env`.
+- **API docs:** built-in `Microsoft.AspNetCore.OpenApi`, document only, at `/openapi/v1.json` in development. No Swagger UI.
+- **Error handling:** built-in ProblemDetails (`AddProblemDetails()`, `TypedResults.Problem` / `ValidationProblem`). No result-wrapper type. Malformed requests are 400, not 500.
+- **JSON:** enums are serialized as strings, both over HTTP and over SignalR.
 - **Auth:**
   - Parents: ASP.NET Core Identity with cookie auth.
   - Devices: pair with a 6-digit code that is exchanged for a long-lived device token. Only the token's hash is stored.
@@ -118,7 +131,7 @@ Project root: `C:\dev\Test`. Remote: `github.com/Some-Random-Person/ScreenTimeMa
   - `POST /api/device/lease`
   - `GET /api/device/state`
 - **Projects:**
-  - `src/ScreenTime.Core`: platform-neutral domain (`BudgetCalculator`, `AppResolver`, `DayWindow`, models). Shared by the server and agents, with no I/O.
+  - `src/ScreenTime.Core`: platform-neutral domain (`BudgetCalculator`, `AppResolver`, `TimeWindow`, models). Shared by the server and agents, with no I/O.
   - `src/ScreenTime.Server`
   - `src/ScreenTime.Agent.Service`: Windows Service (LocalSystem): sync, SQLite outbox, enforcement, browser policies.
   - `src/ScreenTime.Agent.Helper`: WinForms app in the user session: foreground tracking, idle/audio detection, overlay, tray, native messaging host.
@@ -128,8 +141,9 @@ Project root: `C:\dev\Test`. Remote: `github.com/Some-Random-Person/ScreenTimeMa
   - xUnit (from the template) and `Microsoft.AspNetCore.Mvc.Testing`
   - EF Core: `Microsoft.EntityFrameworkCore.Sqlite`, `Npgsql.EntityFrameworkCore.PostgreSQL`, `Microsoft.EntityFrameworkCore.Design` + `dotnet-ef`
   - `Microsoft.AspNetCore.Identity.EntityFrameworkCore`
-  - `Microsoft.AspNetCore.SignalR.Client` (agents, FakeDevice)
+  - `Microsoft.AspNetCore.SignalR.Client` (agents, FakeDevice, server tests)
   - `Microsoft.Extensions.Hosting.WindowsServices`
+  - `Microsoft.AspNetCore.OpenApi` (approved separately)
   - Anything else: ask first.
 
 ## Clients: confirmed
@@ -146,17 +160,6 @@ Project root: `C:\dev\Test`. Remote: `github.com/Some-Random-Person/ScreenTimeMa
 ## Unconfirmed defaults
 
 The user has not confirmed anything in this section. Most of it is carried over from the user's conventions in another project. Ask before relying on any item the first time it comes up, and move it to a confirmed section once the user agrees. Licence and CI are also undecided.
-
-### Backend
-
-- **DI:**
-  - Built-in DI. The DbContext is registered with `AddDbContext`, which makes it scoped.
-  - Anything that uses the DbContext is `AddScoped`, never a singleton.
-- **Config:**
-  - Configuration comes from environment variables, e.g. `ConnectionStrings__DefaultConnection`. Fail fast at startup if it is missing.
-  - A gitignored `.env` holds the values, and `.env.example` is committed.
-- **API docs:** built-in `Microsoft.AspNetCore.OpenApi`. A UI such as Swashbuckle.SwaggerUI is **not** approved yet.
-- **Error handling:** ProblemDetails. Decide the exact pattern when it comes up.
 
 ### Frontend
 
