@@ -207,6 +207,136 @@ namespace ScreenTime.Server.Data.Migrations
                         {
                             Id = new Guid("5e1f0001-0000-4000-8000-000000000007"),
                             Name = "Netflix"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000008"),
+                            Name = "Fortnite"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000009"),
+                            Name = "Instagram"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000000a"),
+                            Name = "Snapchat"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000000b"),
+                            Name = "Facebook"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000000c"),
+                            Name = "WhatsApp"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000000d"),
+                            Name = "Telegram"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000000e"),
+                            Name = "Reddit"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000000f"),
+                            Name = "X (Twitter)"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000010"),
+                            Name = "Pinterest"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000011"),
+                            Name = "Twitch"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000012"),
+                            Name = "YouTube Kids"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000013"),
+                            Name = "Disney+"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000014"),
+                            Name = "Prime Video"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000015"),
+                            Name = "Spotify"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000016"),
+                            Name = "Steam"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000017"),
+                            Name = "Among Us"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000018"),
+                            Name = "Brawl Stars"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000019"),
+                            Name = "Clash Royale"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000001a"),
+                            Name = "Genshin Impact"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000001b"),
+                            Name = "Valorant"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000001c"),
+                            Name = "League of Legends"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000001d"),
+                            Name = "Rocket League"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000001e"),
+                            Name = "Zoom"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000001f"),
+                            Name = "Google Classroom"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000020"),
+                            Name = "Duolingo"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000021"),
+                            Name = "Khan Academy"
                         });
                 });
 
@@ -434,6 +564,552 @@ namespace ScreenTime.Server.Data.Migrations
                             AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000007"),
                             Kind = 3,
                             Value = "com.netflix.Netflix"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000108"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000008"),
+                            Kind = 1,
+                            Value = "fortniteclient-win64-shipping.exe"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000208"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000008"),
+                            Kind = 4,
+                            Value = "fortnite.com"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000308"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000008"),
+                            Kind = 2,
+                            Value = "com.epicgames.fortnite"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000109"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000009"),
+                            Kind = 4,
+                            Value = "instagram.com"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000209"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000009"),
+                            Kind = 2,
+                            Value = "com.instagram.android"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000309"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000009"),
+                            Kind = 3,
+                            Value = "com.burbn.instagram"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000010a"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000000a"),
+                            Kind = 4,
+                            Value = "snapchat.com"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000020a"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000000a"),
+                            Kind = 2,
+                            Value = "com.snapchat.android"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000030a"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000000a"),
+                            Kind = 3,
+                            Value = "com.toyopagroup.picaboo"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000010b"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000000b"),
+                            Kind = 4,
+                            Value = "facebook.com"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000020b"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000000b"),
+                            Kind = 2,
+                            Value = "com.facebook.katana"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000030b"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000000b"),
+                            Kind = 3,
+                            Value = "com.facebook.Facebook"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000010c"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000000c"),
+                            Kind = 1,
+                            Value = "whatsapp.exe"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000020c"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000000c"),
+                            Kind = 4,
+                            Value = "whatsapp.com"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000030c"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000000c"),
+                            Kind = 2,
+                            Value = "com.whatsapp"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000040c"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000000c"),
+                            Kind = 3,
+                            Value = "net.whatsapp.WhatsApp"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000010d"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000000d"),
+                            Kind = 1,
+                            Value = "telegram.exe"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000020d"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000000d"),
+                            Kind = 4,
+                            Value = "telegram.org"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000030d"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000000d"),
+                            Kind = 2,
+                            Value = "org.telegram.messenger"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000040d"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000000d"),
+                            Kind = 3,
+                            Value = "ph.telegra.Telegraph"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000010e"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000000e"),
+                            Kind = 4,
+                            Value = "reddit.com"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000020e"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000000e"),
+                            Kind = 2,
+                            Value = "com.reddit.frontpage"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000030e"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000000e"),
+                            Kind = 3,
+                            Value = "com.reddit.Reddit"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000010f"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000000f"),
+                            Kind = 4,
+                            Value = "x.com"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000020f"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000000f"),
+                            Kind = 4,
+                            Value = "twitter.com"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000030f"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000000f"),
+                            Kind = 2,
+                            Value = "com.twitter.android"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000040f"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000000f"),
+                            Kind = 3,
+                            Value = "com.atebits.Tweetie2"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000110"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000010"),
+                            Kind = 4,
+                            Value = "pinterest.com"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000210"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000010"),
+                            Kind = 2,
+                            Value = "com.pinterest"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000310"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000010"),
+                            Kind = 3,
+                            Value = "pinterest"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000111"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000011"),
+                            Kind = 4,
+                            Value = "twitch.tv"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000211"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000011"),
+                            Kind = 2,
+                            Value = "tv.twitch.android.app"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000311"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000011"),
+                            Kind = 3,
+                            Value = "tv.twitch"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000112"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000012"),
+                            Kind = 4,
+                            Value = "youtubekids.com"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000212"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000012"),
+                            Kind = 2,
+                            Value = "com.google.android.apps.youtube.kids"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000312"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000012"),
+                            Kind = 3,
+                            Value = "com.google.ios.youtubekids"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000113"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000013"),
+                            Kind = 4,
+                            Value = "disneyplus.com"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000213"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000013"),
+                            Kind = 2,
+                            Value = "com.disney.disneyplus"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000313"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000013"),
+                            Kind = 3,
+                            Value = "com.disney.disneyplus"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000114"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000014"),
+                            Kind = 4,
+                            Value = "primevideo.com"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000214"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000014"),
+                            Kind = 2,
+                            Value = "com.amazon.avod.thirdpartyclient"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000314"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000014"),
+                            Kind = 3,
+                            Value = "com.amazon.aiv.AIVApp"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000115"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000015"),
+                            Kind = 1,
+                            Value = "spotify.exe"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000215"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000015"),
+                            Kind = 4,
+                            Value = "spotify.com"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000315"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000015"),
+                            Kind = 2,
+                            Value = "com.spotify.music"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000415"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000015"),
+                            Kind = 3,
+                            Value = "com.spotify.client"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000116"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000016"),
+                            Kind = 1,
+                            Value = "steam.exe"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000216"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000016"),
+                            Kind = 1,
+                            Value = "steamwebhelper.exe"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000316"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000016"),
+                            Kind = 4,
+                            Value = "steampowered.com"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000416"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000016"),
+                            Kind = 4,
+                            Value = "steamcommunity.com"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000516"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000016"),
+                            Kind = 2,
+                            Value = "com.valvesoftware.android.steam.community"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000616"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000016"),
+                            Kind = 3,
+                            Value = "com.valvesoftware.Steam"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000117"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000017"),
+                            Kind = 1,
+                            Value = "among us.exe"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000217"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000017"),
+                            Kind = 2,
+                            Value = "com.innersloth.spacemafia"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000317"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000017"),
+                            Kind = 3,
+                            Value = "com.innersloth.amongus"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000118"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000018"),
+                            Kind = 2,
+                            Value = "com.supercell.brawlstars"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000218"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000018"),
+                            Kind = 3,
+                            Value = "com.supercell.laser"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000119"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000019"),
+                            Kind = 2,
+                            Value = "com.supercell.clashroyale"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000219"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000019"),
+                            Kind = 3,
+                            Value = "com.supercell.scroll"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000011a"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000001a"),
+                            Kind = 1,
+                            Value = "genshinimpact.exe"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000021a"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000001a"),
+                            Kind = 2,
+                            Value = "com.miHoYo.GenshinImpact"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000031a"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000001a"),
+                            Kind = 3,
+                            Value = "com.miHoYo.GenshinImpact"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000011b"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000001b"),
+                            Kind = 1,
+                            Value = "valorant-win64-shipping.exe"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000011c"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000001c"),
+                            Kind = 1,
+                            Value = "league of legends.exe"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000011d"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000001d"),
+                            Kind = 1,
+                            Value = "rocketleague.exe"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000011e"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000001e"),
+                            Kind = 1,
+                            Value = "zoom.exe"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000021e"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000001e"),
+                            Kind = 4,
+                            Value = "zoom.us"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000031e"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000001e"),
+                            Kind = 2,
+                            Value = "us.zoom.videomeetings"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000041e"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000001e"),
+                            Kind = 3,
+                            Value = "us.zoom.videomeetings"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000011f"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000001f"),
+                            Kind = 4,
+                            Value = "classroom.google.com"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000021f"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000001f"),
+                            Kind = 2,
+                            Value = "com.google.android.apps.classroom"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-00000000031f"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-00000000001f"),
+                            Kind = 3,
+                            Value = "com.google.Classroom"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000120"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000020"),
+                            Kind = 4,
+                            Value = "duolingo.com"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000220"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000020"),
+                            Kind = 2,
+                            Value = "com.duolingo"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000320"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000020"),
+                            Kind = 3,
+                            Value = "com.duolingo.DuolingoMobile"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000121"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000021"),
+                            Kind = 4,
+                            Value = "khanacademy.org"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000221"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000021"),
+                            Kind = 2,
+                            Value = "org.khanacademy.android"
+                        },
+                        new
+                        {
+                            Id = new Guid("5e1f0001-0000-4000-8000-000000000321"),
+                            AppDefinitionId = new Guid("5e1f0001-0000-4000-8000-000000000021"),
+                            Kind = 3,
+                            Value = "org.khanacademy.Khan-Academy"
                         });
                 });
 
