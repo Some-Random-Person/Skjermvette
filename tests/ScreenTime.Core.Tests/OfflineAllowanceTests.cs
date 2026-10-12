@@ -83,6 +83,17 @@ public class OfflineAllowanceTests
     }
 
     [Fact]
+    public void OnlineUseSinceGrant_DrawsDownTheLease_SoGoingOfflineCannotDoubleSpend()
+    {
+        var lease = GrantFor(Phone, Min(10));
+        var usedOnlineAfterGrant = OfflineUse(Minecraft, 8);
+
+        var offline = BudgetCalculator.CalculateOffline(lease, Policy().ExemptAppIds, [usedOnlineAfterGrant]);
+
+        Assert.Equal(Min(2), offline.Remaining(Minecraft));
+    }
+
+    [Fact]
     public void ZeroAllowance_BlocksEverythingButExemptAppsAsSoonAsOffline()
     {
         var lease = GrantFor(Phone, TimeSpan.Zero);

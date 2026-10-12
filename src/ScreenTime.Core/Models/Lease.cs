@@ -3,6 +3,8 @@ namespace ScreenTime.Core.Models;
 /// <summary>
 /// A device's offline allowance: time set aside for it so it can keep working without a connection.
 /// <see cref="Total"/> caps all non-exempt use; <see cref="Apps"/> caps each limited app.
+/// All of the device's use since <see cref="GrantedAt"/> (online or offline) draws it down, so devices
+/// renew it with every usage report to keep it in step with the shared budget.
 /// </summary>
 public sealed record Lease(
     Guid DeviceId,
