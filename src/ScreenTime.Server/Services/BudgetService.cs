@@ -86,7 +86,7 @@ public class BudgetService(AppDbContext db, TimeProvider time, IHubContext<Budge
 
         var ids = events.Select(e => e.Id).ToList();
         var known = await db.UsageRecords.Where(u => ids.Contains(u.Id)).Select(u => u.Id).ToListAsync(ct);
-        var resolver = new AppResolver((await db.VisibleAppsAsync(familyId, ct)).Select(a => a.ToCore()));
+        var resolver = new AppResolver((await db.VisibleAppsAsync(familyId, ct)).ToCoreCatalog());
 
         foreach (var e in events.Where(e => !known.Contains(e.Id)).DistinctBy(e => e.Id))
         {

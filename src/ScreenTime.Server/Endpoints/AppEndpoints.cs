@@ -163,7 +163,7 @@ public static class AppEndpoints
     /// <summary>Maps the family's unmapped usage with the current catalog. Returns the children whose usage changed.</summary>
     private static async Task<List<Guid>> ReassignUnmappedUsageAsync(AppDbContext db, Guid familyId, CancellationToken ct)
     {
-        var resolver = new AppResolver((await db.VisibleAppsAsync(familyId, ct)).Select(a => a.ToCore()));
+        var resolver = new AppResolver((await db.VisibleAppsAsync(familyId, ct)).ToCoreCatalog());
         var unmapped = await db.UsageRecords
             .Where(u => u.AppDefinitionId == null && u.Device.Child.FamilyId == familyId)
             .ToListAsync(ct);

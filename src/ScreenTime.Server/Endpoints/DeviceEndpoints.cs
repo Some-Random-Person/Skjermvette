@@ -137,7 +137,7 @@ public static class DeviceEndpoints
             deviceId,
             day.Child.Id,
             day.Policy,
-            catalog.Select(a => a.ToCore()).ToList(),
+            catalog.ToCoreCatalog(),
             day.SnapshotFor(deviceId),
             lease));
     }

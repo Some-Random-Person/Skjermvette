@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.Extensions.DependencyInjection;
 using ScreenTime.Core.Models;
 using ScreenTime.Server.Contracts;
 using ScreenTime.Server.Data;
@@ -15,20 +16,65 @@ public class CatalogTests
     {
         using var factory = new ServerFactory();
         var parent = await factory.CreateParentAsync();
-        var fortnite = await (await parent.PostAsJsonAsync("/api/apps", new AppRequest("Fortnite"), Json)).Content.ReadFromJsonAsync<AppResponse>(Json);
-        var child = await CreateChildAsync(parent, DefaultChild() with { Rules = [new(fortnite!.Id, AppRuleKindEnum.Limited, 20)] });
+        var indieGame = await (await parent.PostAsJsonAsync("/api/apps", new AppRequest("Indie game"), Json)).Content.ReadFromJsonAsync<AppResponse>(Json);
+        var child = await CreateChildAsync(parent, DefaultChild() with { Rules = [new(indieGame!.Id, AppRuleKindEnum.Limited, 20)] });
         var (pc, _) = await factory.PairDeviceAsync(parent, child.Id);
-        await factory.UseAsync(pc, MatcherKindEnum.Process, "FortniteClient-Win64-Shipping.exe", 15);
+        await factory.UseAsync(pc, MatcherKindEnum.Process, "IndieGame-Win64.exe", 15);
 
         var unassigned = await parent.GetFromJsonAsync<List<UnassignedIdentifierResponse>>("/api/apps/unassigned", Json);
-        var add = await parent.PostAsJsonAsync($"/api/apps/{fortnite.Id}/identifiers",
-            new IdentifierDto(MatcherKindEnum.Process, "fortniteclient-win64-shipping.exe"), Json);
+        var add = await parent.PostAsJsonAsync($"/api/apps/{indieGame.Id}/identifiers",
+            new IdentifierDto(MatcherKindEnum.Process, "indiegame-win64.exe"), Json);
         var state = await StateAsync(pc);
 
-        Assert.Single(unassigned!, u => u.RawIdentifier == "FortniteClient-Win64-Shipping.exe" && u.MinutesLast7Days == 15);
+        Assert.Single(unassigned!, u => u.RawIdentifier == "IndieGame-Win64.exe" && u.MinutesLast7Days == 15);
         Assert.Equal(HttpStatusCode.Created, add.StatusCode);
-        Assert.Equal(TimeSpan.FromMinutes(5), state.Snapshot.Remaining(fortnite.Id));
+        Assert.Equal(TimeSpan.FromMinutes(5), state.Snapshot.Remaining(indieGame.Id));
         Assert.Empty((await parent.GetFromJsonAsync<List<UnassignedIdentifierResponse>>("/api/apps/unassigned", Json))!);
+    }
+
+    [Fact]
+    public async Task BuiltInCatalog_RecognisesFortnite()
+    {
+        using var factory = new ServerFactory();
+        var parent = await factory.CreateParentAsync();
+        var child = await CreateChildAsync(parent, DefaultChild() with { Rules = [new(SeedCatalog.Fortnite, AppRuleKindEnum.Limited, 45)] });
+        var (pc, _) = await factory.PairDeviceAsync(parent, child.Id);
+
+        var sync = await factory.UseAsync(pc, MatcherKindEnum.Process, @"C:\Program Files\Epic Games\Fortnite\FortniteClient-Win64-Shipping.exe", 15);
+
+        Assert.Equal(TimeSpan.FromMinutes(30), sync.Snapshot.Remaining(SeedCatalog.Fortnite));
+    }
+
+    [Fact]
+    public async Task FamilyMapping_WinsOverABuiltInIdentifierAddedLater()
+    {
+        using var factory = new ServerFactory();
+        var parent = await factory.CreateParentAsync();
+        var me = await parent.GetFromJsonAsync<MeResponse>("/api/auth/me", Json);
+        var own = await (await parent.PostAsJsonAsync("/api/apps", new AppRequest("Our Fortnite"), Json)).Content.ReadFromJsonAsync<AppResponse>(Json);
+        // Simulates a mapping the family made before Fortnite was in the built-in catalog
+        // (the API refuses it now, because the built-in catalog already has it).
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.AppIdentifiers.Add(new AppIdentifier
+            {
+                AppDefinitionId = own!.Id,
+                FamilyId = me!.FamilyId,
+                Kind = MatcherKindEnum.Process,
+                Value = "fortniteclient-win64-shipping.exe",
+            });
+            await db.SaveChangesAsync();
+        }
+        var child = await CreateChildAsync(parent, DefaultChild() with { Rules = [new(own!.Id, AppRuleKindEnum.Limited, 20)] });
+        var (pc, _) = await factory.PairDeviceAsync(parent, child.Id);
+
+        var sync = await factory.UseAsync(pc, MatcherKindEnum.Process, "FortniteClient-Win64-Shipping.exe", 15);
+        var state = await StateAsync(pc);
+
+        Assert.Equal(TimeSpan.FromMinutes(5), sync.Snapshot.Remaining(own.Id));
+        Assert.DoesNotContain(state.Catalog.Single(a => a.Id == SeedCatalog.Fortnite).Matchers,
+            m => m.Value == "fortniteclient-win64-shipping.exe");
     }
 
     [Fact]

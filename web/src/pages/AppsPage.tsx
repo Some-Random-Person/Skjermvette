@@ -1,7 +1,14 @@
 import { useState, type FormEvent } from "react";
 import { api } from "../api/client";
-import { matcherKinds, type App, type MatcherKind, type UnassignedIdentifier } from "../api/types";
+import {
+  matcherKinds,
+  type App,
+  type Identifier,
+  type MatcherKind,
+  type UnassignedIdentifier,
+} from "../api/types";
 import { ErrorText } from "../components/ErrorText";
+import { appSuggestionEmail } from "../config";
 import { useConfirm } from "../confirm/useConfirm";
 import { formatDate, formatMinutes } from "../format";
 import { t } from "../i18n/t";
@@ -40,6 +47,21 @@ export function AppsPage() {
 }
 
 type Run = (action: () => Promise<unknown>) => Promise<void>;
+
+/**
+ * A mailto: link suggesting a family's identifier for the built-in catalog, or undefined when suggestions
+ * are switched off. iOS tokens differ per device, so they're never worth suggesting.
+ */
+function suggestionLink(appName: string, identifier: Identifier): string | undefined {
+  if (!appSuggestionEmail || identifier.kind === "IosToken") return undefined;
+  const subject = t("apps.suggestSubject", { app: appName });
+  const body = t("apps.suggestBody", {
+    app: appName,
+    kind: t(`kind.${identifier.kind}`),
+    value: identifier.value,
+  });
+  return `mailto:${appSuggestionEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
 
 function Unassigned({
   items,
@@ -150,6 +172,15 @@ function AppCard({ app, run }: { app: App; run: Run }) {
           <span key={id.id} className="chip" title={t(`kind.${id.kind}`)}>
             <span className="muted small">{t(`kind.${id.kind}`)}</span>{" "}
             <span className="mono">{id.value}</span>
+            {!id.isBuiltIn && suggestionLink(app.name, id) && (
+              <a
+                className="chip-suggest small"
+                href={suggestionLink(app.name, id)}
+                title={t("apps.suggestTitle")}
+              >
+                {t("apps.suggest")}
+              </a>
+            )}
             {!id.isBuiltIn && (
               <button
                 type="button"
