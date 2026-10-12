@@ -93,7 +93,19 @@ Project root: `C:\dev\Test`. Remote: `github.com/Some-Random-Person/ScreenTimeMa
 
 ## Backend (.NET): confirmed
 
-- **Framework:** .NET 10 (`net10.0`).
+- **Framework:** .NET 10 (`net10.0`) with a `.slnx` solution file (`ScreenTime.slnx`).
+- **Code style:**
+  - Nullable and ImplicitUsings on. `GenerateDocumentationFile` on, with XML `<summary>` comments on public API endpoints.
+  - File-scoped namespaces and one type per file. Namespaces match project names (`ScreenTime.Core.Models`).
+  - Async methods end in `Async`. Private fields use `_camelCase`.
+  - DTOs are `sealed record`. Mapping is written by hand in static methods, with no AutoMapper.
+  - Comments are sparse.
+  - Entities:
+    - Mutable classes.
+    - `required` for mandatory values, `= null!` for navigation properties, `List<T> X { get; } = []` for collections.
+    - Enums are suffixed `Enum`, start at 1, carry `[Description]`, and live in the entity's file.
+  - Relationships are configured with the fluent API in `OnModelCreating`.
+- **Keys:** Guid primary keys for server entities, since devices generate event IDs offline.
 - **Server:** ASP.NET Core minimal API, plus a SignalR `BudgetHub` that pushes `BudgetSnapshot`s to every device of a child.
 - **Database:**
   - EF Core code-first with migrations.
@@ -137,25 +149,12 @@ The user has not confirmed anything in this section. Most of it is carried over 
 
 ### Backend
 
-- **Solution file:** `.slnx` (the .NET 10 default).
-- **Code style:**
-  - Nullable and ImplicitUsings on. `GenerateDocumentationFile` on, with XML `<summary>` comments on public API endpoints.
-  - File-scoped namespaces and one type per file. Namespaces match project names (`ScreenTime.Core.Models`).
-  - Async methods end in `Async`. Private fields use `_camelCase`.
-  - DTOs are `sealed record`. Mapping is written by hand in static methods, with no AutoMapper.
-  - Comments are sparse.
-  - Entities:
-    - Mutable classes.
-    - `required` for mandatory values, `= null!` for navigation properties, `List<T> X { get; } = []` for collections.
-    - Enums are suffixed `Enum`, start at 1, carry `[Description]`, and live in the entity's file.
-  - Relationships are configured with the fluent API in `OnModelCreating`.
 - **DI:**
   - Built-in DI. The DbContext is registered with `AddDbContext`, which makes it scoped.
   - Anything that uses the DbContext is `AddScoped`, never a singleton.
 - **Config:**
   - Configuration comes from environment variables, e.g. `ConnectionStrings__DefaultConnection`. Fail fast at startup if it is missing.
   - A gitignored `.env` holds the values, and `.env.example` is committed.
-- **Keys:** Guid keys for server entities, since devices generate event IDs offline. This differs from the user's other project, which used external IDs.
 - **API docs:** built-in `Microsoft.AspNetCore.OpenApi`. A UI such as Swashbuckle.SwaggerUI is **not** approved yet.
 - **Error handling:** ProblemDetails. Decide the exact pattern when it comes up.
 
