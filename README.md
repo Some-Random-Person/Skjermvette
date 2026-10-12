@@ -77,7 +77,7 @@ Child devices ──HTTPS + SignalR (device token)──────┘
 
 ## Development
 
-Requirements: [.NET SDK 10](https://dotnet.microsoft.com/download) and [Node.js](https://nodejs.org/) 22 or newer. Docker is only needed to try the self-hosting setup.
+Requirements: [.NET SDK 10](https://dotnet.microsoft.com/download) and [Node.js](https://nodejs.org/) 22 or newer (for the dashboard). Docker is only needed to try the self-hosting setup.
 
 Build and run the tests:
 
@@ -99,6 +99,30 @@ dotnet tool restore
 
 ```bash
 dotnet ef migrations add <Name> --project src/ScreenTime.Server --output-dir Data/Migrations
+```
+
+### Parent dashboard
+
+The dashboard lives in `web/`. While working on it, run the server (above) and the Vite dev server side by side, then open http://localhost:5173. Vite forwards API calls to the server.
+
+```bash
+npm install --prefix web
+```
+
+```bash
+npm run dev --prefix web
+```
+
+Before committing, check types, lint and formatting (`npm run format --prefix web` fixes formatting):
+
+```bash
+npm run check --prefix web
+```
+
+To have the server itself serve the dashboard at http://localhost:5131, build it into `src/ScreenTime.Server/wwwroot`:
+
+```bash
+npm run build --prefix web
 ```
 
 More commands will be added here as each part is built.
