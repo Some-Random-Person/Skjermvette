@@ -154,14 +154,23 @@ Project root: `C:\dev\Test`. Remote: `github.com/Some-Random-Person/ScreenTimeMa
   - Blocks with `declarativeNetRequest` dynamic redirect rules.
   - **Fails closed** if native messaging is unavailable.
 - **Parent dashboard** (`web/`):
-  - React + Vite + TypeScript, served by the server from `wwwroot`.
-  - Pages: login, children, devices/pairing, app catalog, rules editor (including the offline allowance explanation), live today view, grant extra time.
+  - React + Vite + TypeScript, with React Router for pages.
+  - The production build goes into `src/ScreenTime.Server/wwwroot` (gitignored). The server serves it with an `index.html` fallback for page URLs; unknown `/api/...` paths stay 404.
+  - In development, run Vite (`npm run dev`, port 5173). It forwards `/api` and `/hubs` to the server on port 5131, so the auth cookie stays same-origin.
+  - Pages: sign in / register, children overview, child (Today / Rules / Devices tabs), add child, apps (catalog, identifiers, "not recognised yet").
+  - Plain CSS in `src/index.css` with CSS variables, including dark mode. No CSS framework.
+  - **All UI strings** live in `web/src/i18n/en.json` and are read with `t(key, params)`. Don't hard-code text in components.
+  - Data:
+    - `src/api/client.ts` is a fetch wrapper; its errors carry the ProblemDetails message.
+    - `src/api/types.ts` mirrors the server's Contracts.
+    - `useLoad` loads data and can poll: the Today, children and devices views refresh every 15 s.
+  - Lint and format:
+    - ESLint 9 flat config (`@eslint/js`, `typescript-eslint`, `eslint-plugin-react-hooks`).
+    - Prettier: double quotes, trailing commas, 2-space indent, width 100.
+    - Run `npm run check` (types, lint, formatting) before committing.
+  - **No frontend tests** for now. Rely on type checks, lint, server tests and a manual click-through.
+  - npm packages (approved): `react`, `react-dom`, `react-router`, plus dev tooling: `vite`, `@vitejs/plugin-react`, `typescript`, `@types/*`, the ESLint packages above, `prettier`. Anything else: ask first.
 
 ## Unconfirmed defaults
 
-The user has not confirmed anything in this section. Most of it is carried over from the user's conventions in another project. Ask before relying on any item the first time it comes up, and move it to a confirmed section once the user agrees. Licence and CI are also undecided.
-
-### Frontend
-
-- **Style:** Prettier-ish formatting (double quotes, trailing commas, 2-space indent). ESLint 9 flat config.
-- **Tests:** light. Don't add frontend test setups unasked.
+Nothing is pending right now. When Claude has to assume a convention the user hasn't confirmed, it goes here until the user agrees. Licence and CI are still undecided.
