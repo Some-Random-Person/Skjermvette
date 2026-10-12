@@ -84,7 +84,7 @@ Project root: `C:\dev\Test`. Remote: `github.com/Some-Random-Person/ScreenTimeMa
 
 ## Scale and ops
 
-- **Hosting:** self-hosted. The server and Postgres run through `deploy/docker-compose.yml`. The server is exposed through a **Cloudflare Tunnel (`cloudflared`)**, not a reverse proxy like Caddy: TLS ends at Cloudflare, and `cloudflared` forwards plain HTTP to the server, with the client IP in `CF-Connecting-IP` / `X-Forwarded-For`. Whether `cloudflared` runs in the compose file or on the host is undecided; ask in the deploy step.
+- **Hosting:** self-hosted. The server and Postgres run through `deploy/docker-compose.yml`. The server is exposed through a **Cloudflare Tunnel (`cloudflared`)**, not a reverse proxy like Caddy: TLS ends at Cloudflare, and `cloudflared` forwards plain HTTP to the server, with the client IP in `CF-Connecting-IP` / `X-Forwarded-For`. `cloudflared` runs **directly on the host**, not in the compose file. The server container publishes its port on `127.0.0.1` only, so only the host (and `cloudflared`) can reach it.
 - **Dev machine:**
   - Windows 11 with .NET SDK 10 and Node.
   - No Docker or Postgres locally, so dev and tests use SQLite. The compose files are written but can't be run here.
