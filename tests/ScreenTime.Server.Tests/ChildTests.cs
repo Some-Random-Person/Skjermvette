@@ -79,6 +79,24 @@ public class ChildTests
     }
 
     [Fact]
+    public async Task UpdateChild_ChangingTheLimitOfTheSameApp_Works()
+    {
+        using var factory = new ServerFactory();
+        var parent = await factory.CreateParentAsync();
+        var child = await CreateChildAsync(parent);
+
+        var update = DefaultChild() with
+        {
+            Rules = [new(SeedCatalog.YouTube, AppRuleKindEnum.Limited, 45), new(SeedCatalog.Teams, AppRuleKindEnum.Exempt, null)],
+        };
+        var response = await parent.PutAsJsonAsync($"/api/children/{child.Id}", update, Json);
+
+        response.EnsureSuccessStatusCode();
+        var stored = await parent.GetFromJsonAsync<ChildResponse>($"/api/children/{child.Id}", Json);
+        Assert.Contains(stored!.Rules, r => r.AppId == SeedCatalog.YouTube && r.LimitMinutes == 45);
+    }
+
+    [Fact]
     public async Task ExtraTime_AddsToTodaysTotalOnly()
     {
         using var factory = new ServerFactory();
