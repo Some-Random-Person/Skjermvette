@@ -511,3 +511,7 @@ dialog.confirm::backdrop {
     animation: none;
   }
 }
+.chip-suggest {
+  text-decoration: none;
+  margin-left: 0.15rem;
+}

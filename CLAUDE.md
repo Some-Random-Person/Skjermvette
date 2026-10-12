@@ -26,6 +26,15 @@ Project root: `C:\dev\Test`. Remote: `github.com/Some-Random-Person/ScreenTimeMa
   - Rules target platform-neutral logical apps.
   - Each one maps to platform identifiers: process name, Android package, Apple bundle, iOS token, or web domain.
   - Unknown identifiers are stored so the parent can assign them to an app.
+  - Mappings a family makes are private to that family. Nothing is shared between families or sent anywhere automatically.
+  - **Built-in catalog** (`SeedCatalog.cs`): grown by hand with each release, then a migration is added.
+    - App ids continue the sequence (`Id(n)`); never reuse or renumber them.
+    - Only add identifiers that are known to be right. iOS bundle ids are informational, since iOS reports opaque tokens.
+  - **A family's own mapping wins** over a built-in identifier with the same value (`ToCoreCatalog`), so catalog updates never change how a family's existing mappings count.
+  - **Suggestions:** parents can email a family identifier to the maintainer with "Suggest", a `mailto:` they review and send themselves.
+    - The address is `appSuggestionEmail` in `web/src/config.ts`. While it's `null`, the button is hidden.
+    - The user is setting up a dedicated address; don't use their personal one.
+    - Decided against automatic or telemetry-style collection (children's data, GDPR, opt-in and a central service).
 - **Day boundary:** the child's time zone plus a configurable reset hour.
 - **Offline allowance** (internally "lease"):
   - Each device holds a chunk of the remaining time that is set aside for it. The server subtracts it from what the other devices may use, so going offline can never exceed the daily limit.

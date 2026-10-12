@@ -137,6 +137,10 @@
   "apps.unassignedEmpty": "Everything seen recently is recognised.",
   "apps.unassignedLine": "{minutes} in the last 7 days · last seen {date}",
   "apps.assignTo": "Assign to…",
+  "apps.suggest": "Suggest",
+  "apps.suggestTitle": "Suggest adding this to the built-in list, so other families get it automatically. Opens an email you can check before sending.",
+  "apps.suggestSubject": "App suggestion: {app}",
+  "apps.suggestBody": "Please add this to the built-in app list:\n\nApp: {app}\nType: {kind}\nIdentifier: {value}\n\nOnly the lines above are included. Edit or remove anything before sending.",
 
   "kind.Process": "Program",
   "kind.Package": "Android app",
