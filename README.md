@@ -85,6 +85,22 @@ Build and run the tests:
 dotnet test ScreenTime.slnx
 ```
 
+Run the server locally. It uses a SQLite file, `screentime.dev.db`, and listens on http://localhost:5131. The OpenAPI document is at `/openapi/v1.json`.
+
+```bash
+dotnet run --project src/ScreenTime.Server --launch-profile http
+```
+
+After changing the data model, delete `src/ScreenTime.Server/screentime.dev.db` so the development database is recreated. To add a Postgres migration for production:
+
+```bash
+dotnet tool restore
+```
+
+```bash
+dotnet ef migrations add <Name> --project src/ScreenTime.Server --output-dir Data/Migrations
+```
+
 More commands will be added here as each part is built.
 
 ## Contributing
