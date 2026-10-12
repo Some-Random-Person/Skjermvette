@@ -97,6 +97,9 @@ app.UseExceptionHandler(new ExceptionHandlerOptions
     StatusCodeSelector = ex => ex is BadHttpRequestException bad ? bad.StatusCode : StatusCodes.Status500InternalServerError,
 });
 app.UseStatusCodePages();
+// The parent dashboard (built from web/ into wwwroot).
+app.UseDefaultFiles();
+app.UseStaticFiles();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -109,6 +112,10 @@ app.MapChildEndpoints();
 app.MapAppEndpoints();
 app.MapDeviceEndpoints();
 app.MapHub<BudgetHub>(BudgetHub.Path);
+
+// Dashboard routes like /children/{id}/today are handled in the browser; unknown API paths stay 404.
+app.MapFallback("/api/{**path}", () => Results.NotFound());
+app.MapFallbackToFile("index.html");
 
 app.Run();
 
