@@ -1,0 +1,56 @@
+# ---------- .NET ----------
+bin/
+obj/
+*.user
+*.suo
+*.userprefs
+*.rsuser
+.vs/
+TestResults/
+*.trx
+*.coverage
+coverage*.xml
+coverage*.json
+publish/
+artifacts/
+*.nupkg
+*.snupkg
+
+# ---------- Node / TypeScript (web/, extension/) ----------
+node_modules/
+dist/
+.vite/
+*.tsbuildinfo
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Built dashboard copied into the server
+src/ScreenTime.Server/wwwroot/
+
+# Packed browser extension builds
+*.crx
+*.pem
+*.zip
+
+# ---------- Local data & secrets ----------
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+.env
+.env.*
+!.env.example
+appsettings.Development.local.json
+appsettings.*.local.json
+secrets/
+
+# ---------- Editors & OS ----------
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------- Claude Code (personal settings) ----------
+.claude/settings.local.json
