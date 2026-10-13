@@ -73,7 +73,7 @@ builder.Services.AddRateLimiter(options =>
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddSignalR().AddJsonProtocol(o => o.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddProblemDetails();
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(OpenApiSetup.Configure);
 
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<ChildLocks>();
@@ -105,7 +105,16 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 if (app.Environment.IsDevelopment())
+{
     app.MapOpenApi();
+    // Browse and try the API at /docs.
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/openapi/v1.json", "ScreenTime API");
+        options.RoutePrefix = "docs";
+        options.DocumentTitle = "ScreenTime API";
+    });
+}
 
 app.MapAuthEndpoints();
 app.MapChildEndpoints();
