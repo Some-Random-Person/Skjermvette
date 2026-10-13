@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using ScreenTime.Core.DeviceApi;
 using ScreenTime.Core;
 using ScreenTime.Core.Models;
 using ScreenTime.Server.Contracts;

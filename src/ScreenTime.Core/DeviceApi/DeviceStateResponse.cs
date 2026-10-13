@@ -1,6 +1,6 @@
 using ScreenTime.Core.Models;
 
-namespace ScreenTime.Server.Contracts;
+namespace ScreenTime.Core.DeviceApi;
 
 /// <summary>
 /// Everything a device needs to enforce on its own: the rules, the app catalog for mapping identifiers,

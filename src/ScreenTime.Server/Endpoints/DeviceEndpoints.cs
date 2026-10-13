@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
+using ScreenTime.Core.DeviceApi;
 using ScreenTime.Core.Models;
 using ScreenTime.Server.Auth;
 using ScreenTime.Server.Contracts;

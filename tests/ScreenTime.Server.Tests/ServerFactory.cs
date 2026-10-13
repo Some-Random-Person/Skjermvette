@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
+using ScreenTime.Core.DeviceApi;
 using ScreenTime.Core.Models;
 using ScreenTime.Server.Contracts;
 using ScreenTime.Server.Data;

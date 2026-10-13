@@ -1,5 +1,3 @@
-using ScreenTime.Server.Data.Entities;
-
-namespace ScreenTime.Server.Contracts;
+namespace ScreenTime.Core.DeviceApi;
 
 public sealed record PairRequest(string Code, string DeviceName, DevicePlatformEnum Platform);
