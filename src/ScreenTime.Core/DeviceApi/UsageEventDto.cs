@@ -1,6 +1,6 @@
 using ScreenTime.Core.Models;
 
-namespace ScreenTime.Server.Contracts;
+namespace ScreenTime.Core.DeviceApi;
 
 /// <summary>
 /// One stretch of use. <see cref="Id"/> is generated on the device so re-sending is safe.

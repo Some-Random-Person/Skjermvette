@@ -1,3 +1,4 @@
+using ScreenTime.Core.DeviceApi;
 using ScreenTime.Server.Data.Entities;
 
 namespace ScreenTime.Server.Contracts;

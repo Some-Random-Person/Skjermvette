@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using ScreenTime.Core.DeviceApi;
 using ScreenTime.Server.Contracts;
 using ScreenTime.Server.Data.Entities;
 using static ScreenTime.Server.Tests.ServerFactory;

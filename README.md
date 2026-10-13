@@ -101,6 +101,28 @@ dotnet tool restore
 dotnet ef migrations add <Name> --project src/ScreenTime.Server --output-dir Data/Migrations
 ```
 
+### Fake devices
+
+`tools/FakeDevice` pretends to be a phone or PC, so you can try limits across devices before any real agent exists. With the server running, create a pairing code on a child's Devices tab, then pair:
+
+```bash
+dotnet run --project tools/FakeDevice -- pair 123456 --name Phone --platform Android
+```
+
+Report 15 minutes of YouTube on that phone, then see what the child has left:
+
+```bash
+dotnet run --project tools/FakeDevice -- use Phone android com.google.android.youtube 15
+```
+
+Keep "using" an app the way a real agent reports it, every 15 seconds, and watch updates pushed from other devices (Ctrl+C to stop):
+
+```bash
+dotnet run --project tools/FakeDevice -- live PC website www.youtube.com
+```
+
+Run the tool without arguments for all commands (`state`, `watch`, `list`, `forget`).
+
 ### Parent dashboard
 
 The dashboard lives in `web/`. While working on it, run the server (above) and the Vite dev server side by side, then open http://localhost:5173. Vite forwards API calls to the server.
