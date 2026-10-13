@@ -139,13 +139,15 @@ Project root: `C:\dev\Test`. Remote: `github.com/Some-Random-Person/ScreenTimeMa
   - `POST /api/device/usage`: batched events, idempotent by client event GUID.
   - `POST /api/device/lease`
   - `GET /api/device/state`
+  - The request and response types live in **`ScreenTime.Core.DeviceApi`** (with `DevicePlatformEnum`), so the server, `FakeDevice` and the agents share one definition.
+  - Agents send usage every ~15 s with `POST /api/device/usage`; each call also renews the offline allowance.
 - **Projects:**
   - `src/ScreenTime.Core`: platform-neutral domain (`BudgetCalculator`, `AppResolver`, `TimeWindow`, models). Shared by the server and agents, with no I/O.
   - `src/ScreenTime.Server`
   - `src/ScreenTime.Agent.Service`: Windows Service (LocalSystem): sync, SQLite outbox, enforcement, browser policies.
   - `src/ScreenTime.Agent.Helper`: WinForms app in the user session: foreground tracking, idle/audio detection, overlay, tray, native messaging host.
   - `tests/ScreenTime.Core.Tests`, `tests/ScreenTime.Server.Tests` (xUnit).
-  - `tools/FakeDevice`: simulates a second device.
+  - `tools/FakeDevice`: a console app that pairs like a real device and reports made-up usage (`pair`, `use`, `live`, `state`, `watch`, `list`, `forget`). Saved tokens live in `%LOCALAPPDATA%\ScreenTime\FakeDevice`. Use it to test across devices without real agents.
 - **Packages (approved with the Phase 1 plan):**
   - xUnit (from the template) and `Microsoft.AspNetCore.Mvc.Testing`
   - EF Core: `Microsoft.EntityFrameworkCore.Sqlite`, `Npgsql.EntityFrameworkCore.PostgreSQL`, `Microsoft.EntityFrameworkCore.Design` + `dotnet-ef`
