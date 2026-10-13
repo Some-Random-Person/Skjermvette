@@ -85,7 +85,7 @@ Build and run the tests:
 dotnet test ScreenTime.slnx
 ```
 
-Run the server locally. It uses a SQLite file, `screentime.dev.db`, and listens on http://localhost:5131. The OpenAPI document is at `/openapi/v1.json`.
+Run the server locally. It uses a SQLite file, `screentime.dev.db`, and listens on http://localhost:5131. Browse and try the API at http://localhost:5131/docs (Swagger UI; the raw OpenAPI document is at `/openapi/v1.json`).
 
 ```bash
 dotnet run --project src/ScreenTime.Server --launch-profile http

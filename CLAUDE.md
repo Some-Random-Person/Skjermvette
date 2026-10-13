@@ -129,7 +129,9 @@ Project root: `C:\dev\Test`. Remote: `github.com/Some-Random-Person/ScreenTimeMa
   - Production: environment variables only (`ConnectionStrings__DefaultConnection`, `Database__Provider` = `Sqlite` | `Postgres`). Fail fast at startup if either is missing.
   - A gitignored `.env` holds production values, and `.env.example` is committed.
   - Development: `appsettings.Development.json` points at a local SQLite file, so `dotnet run` works without a `.env`.
-- **API docs:** built-in `Microsoft.AspNetCore.OpenApi`, document only, at `/openapi/v1.json` in development. No Swagger UI.
+- **API docs** (development only):
+  - Built-in `Microsoft.AspNetCore.OpenApi` generates `/openapi/v1.json`, and `Swashbuckle.AspNetCore.SwaggerUI` shows it at **`/docs`**.
+  - `Endpoints/OpenApiSetup.cs` adds the title, the device-token scheme (the Authorize button, on `/api/device/*` except pairing), and each endpoint handler's XML `<summary>`. It reads those from the build's XML documentation file, because ASP.NET Core's XML-comment generator didn't attach to this project. Keep a `<summary>` on every endpoint handler.
 - **Error handling:** built-in ProblemDetails (`AddProblemDetails()`, `TypedResults.Problem` / `ValidationProblem`). No result-wrapper type. Malformed requests are 400, not 500.
 - **JSON:** enums are serialized as strings, both over HTTP and over SignalR.
 - **Auth:**
@@ -154,7 +156,7 @@ Project root: `C:\dev\Test`. Remote: `github.com/Some-Random-Person/ScreenTimeMa
   - `Microsoft.AspNetCore.Identity.EntityFrameworkCore`
   - `Microsoft.AspNetCore.SignalR.Client` (agents, FakeDevice, server tests)
   - `Microsoft.Extensions.Hosting.WindowsServices`
-  - `Microsoft.AspNetCore.OpenApi` (approved separately)
+  - `Microsoft.AspNetCore.OpenApi` and `Swashbuckle.AspNetCore.SwaggerUI` (both approved separately)
   - Anything else: ask first.
 
 ## Clients: confirmed
