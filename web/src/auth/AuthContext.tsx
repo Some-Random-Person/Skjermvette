@@ -8,6 +8,8 @@ export interface Auth {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  /** Updates the signed-in parent after an account change (name or email). */
+  setMe: (me: Me) => void;
 }
 
 export const AuthContext = createContext<Auth | null>(null);
@@ -31,6 +33,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setMe(null);
   }, []);
 
-  const value = useMemo(() => ({ me, login, register, logout }), [me, login, register, logout]);
+  const value = useMemo(
+    () => ({ me, login, register, logout, setMe }),
+    [me, login, register, logout],
+  );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

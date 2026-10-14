@@ -28,8 +28,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     {
         base.OnModelCreating(builder);
 
-        builder.Entity<ParentUser>()
-            .HasOne(p => p.Family).WithMany(f => f.Parents).HasForeignKey(p => p.FamilyId);
+        builder.Entity<ParentUser>(e =>
+        {
+            e.Property(p => p.DisplayName).HasMaxLength(100);
+            e.HasOne(p => p.Family).WithMany(f => f.Parents).HasForeignKey(p => p.FamilyId);
+        });
 
         builder.Entity<Child>(e =>
         {

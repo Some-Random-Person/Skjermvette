@@ -117,6 +117,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapAuthEndpoints();
+app.MapAccountEndpoints();
 app.MapChildEndpoints();
 app.MapAppEndpoints();
 app.MapDeviceEndpoints();

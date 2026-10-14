@@ -586,3 +586,8 @@ dialog.confirm::backdrop {
   justify-content: center;
   margin-top: 1rem;
 }
+
+/* Settings: forms read better a bit narrower than the full page. */
+.narrow-content {
+  max-width: 640px;
+}

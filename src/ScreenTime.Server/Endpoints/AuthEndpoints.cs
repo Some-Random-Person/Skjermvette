@@ -16,7 +16,7 @@ public static class AuthEndpoints
         group.MapPost("/register", RegisterAsync);
         group.MapPost("/login", LoginAsync);
         group.MapPost("/logout", LogoutAsync).RequireAuthorization(AppClaims.ParentPolicy);
-        group.MapGet("/me", Me).RequireAuthorization(AppClaims.ParentPolicy);
+        group.MapGet("/me", MeAsync).RequireAuthorization(AppClaims.ParentPolicy);
     }
 
     /// <summary>Creates a parent account with a new family and signs in.</summary>
@@ -31,13 +31,11 @@ public static class AuthEndpoints
         if (!result.Succeeded)
         {
             db.Families.Remove(family);
-            return TypedResults.ValidationProblem(result.Errors
-                .GroupBy(e => e.Code)
-                .ToDictionary(g => g.Key, g => g.Select(e => e.Description).ToArray()));
+            return TypedResults.ValidationProblem(ParentSession.Errors(result));
         }
 
-        await SignInAsync(signIn, user);
-        return TypedResults.Ok(new MeResponse(user.Email!, user.FamilyId));
+        await ParentSession.SignInAsync(signIn, user);
+        return TypedResults.Ok(MeResponse.From(user));
     }
 
     /// <summary>Signs a parent in with a persistent cookie.</summary>
@@ -55,8 +53,8 @@ public static class AuthEndpoints
                 statusCode: StatusCodes.Status401Unauthorized);
         }
 
-        await SignInAsync(signIn, user!);
-        return TypedResults.Ok(new MeResponse(user!.Email!, user.FamilyId));
+        await ParentSession.SignInAsync(signIn, user!);
+        return TypedResults.Ok(MeResponse.From(user!));
     }
 
     /// <summary>Signs the parent out.</summary>
@@ -66,10 +64,10 @@ public static class AuthEndpoints
         return TypedResults.NoContent();
     }
 
-    /// <summary>The signed-in parent.</summary>
-    private static Ok<MeResponse> Me(ClaimsPrincipal user) =>
-        TypedResults.Ok(new MeResponse(user.FindFirstValue(ClaimTypes.Email) ?? user.Identity!.Name!, user.GetFamilyId()));
-
-    private static Task SignInAsync(SignInManager<ParentUser> signIn, ParentUser user) =>
-        signIn.SignInWithClaimsAsync(user, isPersistent: true, [new Claim(AppClaims.FamilyId, user.FamilyId.ToString())]);
+    /// <summary>The signed-in parent, read from the database so name and email changes show straight away.</summary>
+    private static async Task<Results<Ok<MeResponse>, UnauthorizedHttpResult>> MeAsync(
+        ClaimsPrincipal principal, UserManager<ParentUser> users) =>
+        await users.GetUserAsync(principal) is { } user
+            ? TypedResults.Ok(MeResponse.From(user))
+            : TypedResults.Unauthorized();
 }

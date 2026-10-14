@@ -8,6 +8,7 @@ export const matcherKinds: MatcherKind[] = ["Process", "Domain", "Package", "Bun
 
 export interface Me {
   email: string;
+  name: string | null;
   familyId: string;
 }
 
