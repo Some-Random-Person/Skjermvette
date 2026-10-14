@@ -79,10 +79,19 @@ public class ServerFactory : WebApplicationFactory<Program>
         return (device, pairing);
     }
 
-    /// <summary>Uploads <paramref name="minutes"/> of use in 5-minute events starting at <paramref name="start"/> (default: an hour ago).</summary>
+    // Where the next UseAsync call without a start goes. Overlapping time counts once, so by default
+    // each call is placed right after the previous one, starting three hours before "now".
+    private DateTimeOffset? _nextStart;
+
+    /// <summary>
+    /// Uploads <paramref name="minutes"/> of use in 5-minute events starting at <paramref name="start"/>.
+    /// Without a start, consecutive calls follow each other so they don't overlap.
+    /// </summary>
     public async Task<SyncResponse> UseAsync(HttpClient device, MatcherKindEnum kind, string raw, double minutes, DateTimeOffset? start = null)
     {
-        var from = start ?? Clock.Now.AddHours(-1);
+        var from = start ?? _nextStart ?? Clock.Now.AddHours(-3);
+        if (start is null)
+            _nextStart = from.AddMinutes(minutes);
         var events = new List<UsageEventDto>();
         for (var done = 0.0; done < minutes; done += 5)
             events.Add(new UsageEventDto(Guid.NewGuid(), kind, raw, from.AddMinutes(done), Math.Min(5, minutes - done) * 60));

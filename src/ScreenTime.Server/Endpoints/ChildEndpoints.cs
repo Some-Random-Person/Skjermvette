@@ -129,7 +129,7 @@ public static class ChildEndpoints
 
         var usedByApp = day.Events
             .GroupBy(e => e.LogicalAppId)
-            .ToDictionary(g => g.Key ?? Guid.Empty, g => g.Aggregate(TimeSpan.Zero, (sum, e) => sum + day.Day.Overlap(e.Start, e.End)));
+            .ToDictionary(g => g.Key ?? Guid.Empty, g => BudgetCalculator.UsedTime(g, day.Day));
 
         var appRows = rules.Keys.Union(usedByApp.Keys)
             .Select(appId =>

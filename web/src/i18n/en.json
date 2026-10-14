@@ -48,6 +48,7 @@
   "today.includesExtra": "includes {extra} extra",
   "today.apps": "Apps",
   "today.noUsage": "No screen time recorded today.",
+  "today.overlapNote": "Time spent on several apps or devices at the same time counts only once toward the daily limit, so the apps above can add up to more than the time used today.",
   "today.otherApps": "Other apps",
   "today.exempt": "Exempt",
   "today.limited": "Limit {limit}",

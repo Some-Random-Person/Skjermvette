@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { api } from "../api/client";
-import type { Device, TodayApp } from "../api/types";
+import type { Device, Today, TodayApp } from "../api/types";
 import { ErrorText } from "../components/ErrorText";
 import { Meter } from "../components/Meter";
 import { formatMinutes, formatTime } from "../format";
@@ -47,6 +47,7 @@ export function TodayTab() {
             ))}
           </ul>
         )}
+        {hasOverlap(today) && <p className="muted small">{t("today.overlapNote")}</p>}
       </section>
 
       <section className="card">
@@ -65,6 +66,14 @@ export function TodayTab() {
       <ExtraTime childId={child.id} onAdded={reload} />
     </div>
   );
+}
+
+/** True when counted apps were used at the same time, so their rows add up to more than "Used today". */
+function hasOverlap(today: Today): boolean {
+  const counted = today.apps
+    .filter((a) => a.kind !== "Exempt")
+    .reduce((sum, a) => sum + a.usedMinutes, 0);
+  return counted - today.totalUsedMinutes >= 0.5;
 }
 
 function Stat({ label, value, note }: { label: string; value: string; note?: string }) {
