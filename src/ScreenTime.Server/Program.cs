@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using ScreenTime.Server.Auth;
@@ -34,7 +35,12 @@ builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
         // This is an API: answer with status codes instead of redirecting to a login page.
         options.Events.OnRedirectToLogin = ctx => { ctx.Response.StatusCode = StatusCodes.Status401Unauthorized; return Task.CompletedTask; };
         options.Events.OnRedirectToAccessDenied = ctx => { ctx.Response.StatusCode = StatusCodes.Status403Forbidden; return Task.CompletedTask; };
+        // Re-check the sign-in against the database (security stamp): a changed password or email,
+        // or a deleted account, signs other browsers out within ParentSession.RecheckInterval.
+        options.Events.OnValidatePrincipal = SecurityStampValidator.ValidatePrincipalAsync;
     })
+    // Unused, but when the security stamp check rejects a sign-in, Identity also signs this scheme out.
+    .AddCookie(IdentityConstants.TwoFactorRememberMeScheme)
     .AddScheme<AuthenticationSchemeOptions, DeviceTokenHandler>(DeviceTokenHandler.SchemeName, null);
 
 builder.Services.AddAuthorizationBuilder()
@@ -59,7 +65,20 @@ builder.Services.AddIdentityCore<ParentUser>(options =>
         options.Lockout.MaxFailedAccessAttempts = 5;
     })
     .AddEntityFrameworkStores<AppDbContext>()
-    .AddSignInManager();
+    .AddSignInManager()
+    .AddClaimsPrincipalFactory<ParentClaimsFactory>();
+
+// AddIdentityCore doesn't register the security stamp validator that AddIdentity would.
+builder.Services.AddScoped<ISecurityStampValidator, SecurityStampValidator<ParentUser>>();
+// The cookie and the re-check use the app's clock, so tests can move time forward.
+builder.Services.AddOptions<SecurityStampValidatorOptions>()
+    .Configure<TimeProvider>((options, time) =>
+    {
+        options.ValidationInterval = ParentSession.RecheckInterval;
+        options.TimeProvider = time;
+    });
+builder.Services.AddOptions<CookieAuthenticationOptions>(IdentityConstants.ApplicationScheme)
+    .Configure<TimeProvider>((options, time) => options.TimeProvider = time);
 
 builder.Services.AddRateLimiter(options =>
 {

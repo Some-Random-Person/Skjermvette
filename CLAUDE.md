@@ -138,6 +138,8 @@ Project root: `C:\dev\Test`. Remote: `github.com/Some-Random-Person/ScreenTimeMa
 - **JSON:** enums are serialized as strings, both over HTTP and over SignalR.
 - **Auth:**
   - Parents: ASP.NET Core Identity with cookie auth. Optional `DisplayName` (max 100).
+  - Parent sign-ins are **re-checked against the database every minute** (Identity security stamp, `ParentSession.RecheckInterval`). A password or email change, or a deleted account, signs other browsers out within a minute. Anything that should cut off a parent's access (e.g. removing them from a family, #29) must call `UpdateSecurityStampAsync`.
+  - The `family_id` claim is added by `ParentClaimsFactory`, so it survives the re-check. Don't add claims by hand at sign-in.
   - Account settings (`/api/account/name|email|password`): changing email or password needs the current password. Email changes have **no confirmation email** (the server doesn't send email), so the dashboard asks for the address twice. `/api/auth/me` reads the user from the database.
   - Devices: pair with a 6-digit code that is exchanged for a long-lived device token. Only the token's hash is stored.
 - **Device API:**
