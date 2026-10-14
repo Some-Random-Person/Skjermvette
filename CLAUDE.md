@@ -175,7 +175,7 @@ Project root: `C:\dev\Test`. Remote: `github.com/Some-Random-Person/ScreenTimeMa
   - Pages: sign in / register, children overview, child (Today / Rules / Devices tabs), add child, apps (catalog, identifiers, "not recognised yet").
   - Plain CSS in `src/index.css` with CSS variables. No CSS framework.
   - **Colours:** the user's palette (2026-10-14). **Dark is the default** (`:root`), and light is `body.light`.
-    - Each colour is given in `hsl` (fallback) and then `oklch`. Use only these variables (`--bg-dark`, `--bg`, `--bg-light`, `--text`, `--text-muted`, `--highlight`, `--border`, `--border-muted`, `--primary`, `--secondary`, `--danger`, `--warning`, `--success`, `--info`); don't add raw colours.
+    - Each colour is given in `hsl` (fallback) and then `oklch`. Use only these variables (`--bg-dark`, `--bg`, `--bg-light`, `--text`, `--text-muted`, `--highlight`, `--border`, `--border-muted`, `--primary`, `--secondary`, `--danger`, `--warning`, `--success`, `--info`); don't add raw colours (transparent black for shadows and the dialog backdrop is the only exception).
     - Usage: page `--bg`, cards `--bg-light`, top bar `--bg-dark`, dividers `--border-muted`, inputs `--border`, family-made apps `--secondary`.
   - **Theme switch:** Device (default, follows the system) / Light / Dark.
     - Saved in the browser (`localStorage` key `theme`; nothing is stored for Device). Code in `src/theme.ts` and `ThemeSwitcher`, shown in the top bar and on the sign-in page.
