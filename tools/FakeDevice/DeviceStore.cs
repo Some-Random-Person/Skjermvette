@@ -11,7 +11,9 @@ public static class DeviceStore
     public static async Task SaveAsync(SavedDevice device)
     {
         Directory.CreateDirectory(Folder);
-        await File.WriteAllTextAsync(PathFor(device.Name), JsonSerializer.Serialize(device, DeviceClient.Json));
+        // CreateNew: never overwrite another device's token (callers check Exists first; this is the safety net).
+        await using var file = new FileStream(PathFor(device.Name), FileMode.CreateNew);
+        await JsonSerializer.SerializeAsync(file, device, DeviceClient.Json);
     }
 
     public static async Task<SavedDevice> LoadAsync(string name)
@@ -28,6 +30,8 @@ public static class DeviceStore
                 .Select(path => JsonSerializer.Deserialize<SavedDevice>(File.ReadAllText(path), DeviceClient.Json)!)
                 .OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
             : [];
+
+    public static bool Exists(string name) => File.Exists(PathFor(name));
 
     public static bool Forget(string name)
     {
