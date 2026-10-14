@@ -151,7 +151,7 @@ Project root: `C:\dev\Test`. Remote: `github.com/Some-Random-Person/ScreenTimeMa
   - `src/ScreenTime.Agent.Service`: Windows Service (LocalSystem): sync, SQLite outbox, enforcement, browser policies.
   - `src/ScreenTime.Agent.Helper`: WinForms app in the user session: foreground tracking, idle/audio detection, overlay, tray, native messaging host.
   - `tests/ScreenTime.Core.Tests`, `tests/ScreenTime.Server.Tests` (xUnit).
-  - `tools/FakeDevice`: a console app that pairs like a real device and reports made-up usage (`pair`, `use`, `live`, `state`, `watch`, `list`, `forget`). Saved tokens live in `%LOCALAPPDATA%\ScreenTime\FakeDevice`. Use it to test across devices without real agents.
+  - `tools/FakeDevice`: a console app that pairs like a real device and reports made-up usage (`pair`, `use`, `live`, `state`, `watch`, `list`, `forget`). Saved tokens live in `%LOCALAPPDATA%\ScreenTime\FakeDevice`, one file per device name. Names are unique on the computer (across children, ignoring case), and `pair` refuses an existing name. Use it to test across devices without real agents.
 - **Packages (approved with the Phase 1 plan):**
   - xUnit (from the template) and `Microsoft.AspNetCore.Mvc.Testing`
   - EF Core: `Microsoft.EntityFrameworkCore.Sqlite`, `Npgsql.EntityFrameworkCore.PostgreSQL`, `Microsoft.EntityFrameworkCore.Design` + `dotnet-ef`

@@ -8,6 +8,7 @@ const string Help = """
     Usage:
       pair <code> --name <name> [--platform Windows|Android|Ios|MacOs|Linux] [--server <url>]
           Pair with a 6-digit code from the dashboard (Devices tab). Default server: http://localhost:5131
+          Names must be unique on this computer, across all children.
       use <name> <kind> <identifier> <minutes>
           Report <minutes> of use that ended just now, e.g.  use Phone package com.google.android.youtube 15
       live <name> <kind> <identifier>
@@ -56,6 +57,11 @@ static async Task<int> PairAsync(string code, string[] options)
             : throw new UsageException($"Unknown platform \"{p}\". Use Windows, Android, Ios, MacOs or Linux.")
         : DevicePlatformEnum.Android;
     var server = new Uri(Option(options, "--server") ?? "http://localhost:5131");
+
+    // Each saved device holds its own token. Overwriting one would cut off a device that's still paired,
+    // so refuse before the pairing code is used up.
+    if (DeviceStore.Exists(name))
+        throw new UsageException($"A fake device called \"{name}\" is already saved (names are shared across children and ignore case). Pick another --name, or run 'forget {name}' first.");
 
     var paired = await DeviceClient.PairAsync(server, new PairRequest(code, name, platform));
     await DeviceStore.SaveAsync(new SavedDevice(name, server, paired.DeviceId, paired.ChildId, paired.Token));
