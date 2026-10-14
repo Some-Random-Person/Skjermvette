@@ -58,6 +58,24 @@ public class BudgetTests
     }
 
     [Fact]
+    public async Task UsingThePhoneAndThePcAtTheSameTime_CountsOnce()
+    {
+        using var factory = new ServerFactory();
+        var parent = await factory.CreateParentAsync();
+        var child = await CreateChildAsync(parent);
+        var (pc, _) = await factory.PairDeviceAsync(parent, child.Id, "PC");
+        var (phone, _) = await factory.PairDeviceAsync(parent, child.Id, "Phone");
+        var start = factory.Clock.Now.AddMinutes(-30);
+
+        await factory.UseAsync(phone, MatcherKindEnum.Package, "com.google.android.youtube", 10, start);
+        await factory.UseAsync(pc, MatcherKindEnum.Domain, "youtube.com", 10, start);
+        var today = await parent.GetFromJsonAsync<TodayResponse>($"/api/children/{child.Id}/today", Json);
+
+        Assert.Equal(10, today!.TotalUsedMinutes, 3);
+        Assert.Contains(today.Apps, a => a.AppId == SeedCatalog.YouTube && Math.Abs(a.UsedMinutes - 10) < 0.001);
+    }
+
+    [Fact]
     public async Task ResendingTheSameEvents_DoesNotCountThemTwice()
     {
         using var factory = new ServerFactory();

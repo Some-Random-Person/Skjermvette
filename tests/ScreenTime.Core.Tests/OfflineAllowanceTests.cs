@@ -27,7 +27,7 @@ public class OfflineAllowanceTests
     [Fact]
     public void Grant_NeverExceedsWhatIsLeft()
     {
-        var lease = GrantFor(Phone, Min(10), [Use(YouTube, 27), Use(Minecraft, 90)]);
+        var lease = GrantFor(Phone, Min(10), [Use(YouTube, 27, startHour: 8), Use(Minecraft, 90, startHour: 10)]);
 
         Assert.Equal(Min(3), lease.Total);
         Assert.Equal(Min(3), lease.Apps[YouTube]);

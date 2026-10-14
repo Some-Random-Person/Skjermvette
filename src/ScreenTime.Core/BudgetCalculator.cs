@@ -5,7 +5,8 @@ namespace ScreenTime.Core;
 public static class BudgetCalculator
 {
     /// <summary>
-    /// Today's budget as seen by one device. Usage from every device counts (time is added up, not merged).
+    /// Today's budget as seen by one device. Usage from every device counts, but time when several apps or devices
+    /// are in use at once counts only once, for the total and for each app's limit.
     /// <paramref name="otherDevicesLeases"/> are the active offline allowances of the child's other devices.
     /// </summary>
     public static BudgetSnapshot Calculate(
@@ -40,19 +41,14 @@ public static class BudgetCalculator
         TimeSpan reservedTotal,
         IReadOnlyDictionary<Guid, TimeSpan> reservedApps)
     {
-        var totalUsed = TimeSpan.Zero;
-        var appUsed = new Dictionary<Guid, TimeSpan>();
-
-        foreach (var e in events)
-        {
-            if (e.LogicalAppId is { } exempt && exemptAppIds.Contains(exempt))
-                continue;
-
-            var counted = window.Overlap(e.Start, e.End);
-            totalUsed += counted;
-            if (e.LogicalAppId is { } appId)
-                appUsed[appId] = appUsed.GetValueOrDefault(appId) + counted;
-        }
+        var counted = events
+            .Where(e => e.LogicalAppId is not { } id || !exemptAppIds.Contains(id))
+            .ToList();
+        var totalUsed = UsedTime(counted, window);
+        var appUsed = counted
+            .Where(e => e.LogicalAppId is not null)
+            .GroupBy(e => e.LogicalAppId!.Value)
+            .ToDictionary(g => g.Key, g => UsedTime(g, window));
 
         var apps = appLimits
             .Where(kv => !exemptAppIds.Contains(kv.Key))
@@ -61,6 +57,39 @@ public static class BudgetCalculator
 
         return new BudgetSnapshot(totalLimit, totalUsed, reservedTotal, apps, exemptAppIds);
     }
+
+    /// <summary>
+    /// Wall-clock time covered by <paramref name="events"/> within <paramref name="window"/>. Overlapping events
+    /// (several apps or devices in use at once) count once: one minute is one minute.
+    /// </summary>
+    public static TimeSpan UsedTime(IEnumerable<UsageEvent> events, TimeWindow window)
+    {
+        var used = TimeSpan.Zero;
+        DateTimeOffset? runStart = null, runEnd = null;
+
+        foreach (var (start, end) in events
+            .Select(e => (Start: Max(e.Start, window.Start), End: Min(e.End, window.End)))
+            .Where(i => i.End > i.Start)
+            .OrderBy(i => i.Start))
+        {
+            if (runEnd is { } current && start <= current)
+            {
+                if (end > current)
+                    runEnd = end;
+                continue;
+            }
+            if (runStart is { } s && runEnd is { } e)
+                used += e - s;
+            runStart = start;
+            runEnd = end;
+        }
+        if (runStart is { } lastStart && runEnd is { } lastEnd)
+            used += lastEnd - lastStart;
+        return used;
+    }
+
+    private static DateTimeOffset Max(DateTimeOffset a, DateTimeOffset b) => a > b ? a : b;
+    private static DateTimeOffset Min(DateTimeOffset a, DateTimeOffset b) => a < b ? a : b;
 
     private static TimeSpan Sum(IEnumerable<TimeSpan> values) => values.Aggregate(TimeSpan.Zero, (a, b) => a + b);
 }

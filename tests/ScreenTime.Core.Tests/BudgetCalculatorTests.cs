@@ -40,11 +40,57 @@ public class BudgetCalculatorTests
     }
 
     [Fact]
-    public void SimultaneousUseOnTwoDevices_IsAddedUp()
+    public void SameAppOnTwoDevicesAtOnce_CountsOnce_ForTheTotalAndTheApp()
     {
-        var snapshot = Calculate([Use(Minecraft, 10, device: Phone), Use(Minecraft, 10, device: Pc)]);
+        var snapshot = Calculate([Use(YouTube, 10, device: Phone), Use(YouTube, 10, device: Pc)]);
+
+        Assert.Equal(Min(10), snapshot.TotalUsed);
+        Assert.Equal(Min(20), snapshot.Remaining(YouTube));
+    }
+
+    [Fact]
+    public void DifferentAppsOnTwoDevicesAtOnce_CountOnceForTheTotal_AndFullyForEachApp()
+    {
+        var snapshot = Calculate([Use(YouTube, 10, device: Phone), Use(Minecraft, 10, device: Pc)]);
+
+        Assert.Equal(Min(10), snapshot.TotalUsed);
+        Assert.Equal(Min(20), snapshot.Remaining(YouTube));
+    }
+
+    [Fact]
+    public void BackgroundAudio_CountsTowardTheAppsLimit_ButNotTwiceTowardTheTotal()
+    {
+        // YouTube plays in a background tab while another site is in front, on the same PC.
+        var snapshot = Calculate([Use(YouTube, 10), Use(null, 10)]);
+
+        Assert.Equal(Min(10), snapshot.TotalUsed);
+        Assert.Equal(Min(20), snapshot.Remaining(YouTube));
+    }
+
+    [Fact]
+    public void PartlyOverlappingUse_CountsTheCoveredTimeOnce()
+    {
+        // Phone 10:00–10:10, PC 10:05–10:20: 20 minutes on the clock.
+        var phone = Use(Minecraft, 10, device: Phone);
+        var pc = Use(Minecraft, 15, device: Pc) with { Start = phone.Start.AddMinutes(5) };
+
+        Assert.Equal(Min(20), Calculate([phone, pc]).TotalUsed);
+    }
+
+    [Fact]
+    public void UseAtDifferentTimes_IsAddedUp()
+    {
+        var snapshot = Calculate([Use(Minecraft, 10, device: Phone, startHour: 9), Use(Minecraft, 10, device: Pc, startHour: 11)]);
 
         Assert.Equal(Min(20), snapshot.TotalUsed);
+    }
+
+    [Fact]
+    public void ExemptUseAtTheSameTime_DoesNotHideCountedUse()
+    {
+        var snapshot = Calculate([Use(Teams, 30, device: Pc), Use(Minecraft, 10, device: Phone)]);
+
+        Assert.Equal(Min(10), snapshot.TotalUsed);
     }
 
     [Fact]
