@@ -37,7 +37,15 @@ public class ServerFactory : WebApplicationFactory<Program>
     {
         base.Dispose(disposing);
         SqliteConnection.ClearAllPools();
-        File.Delete(_dbPath);
+        try
+        {
+            File.Delete(_dbPath);
+        }
+        catch (IOException)
+        {
+            // Windows (e.g. a virus scanner) can hold the file for a moment. It's a temp file, so leave it
+            // rather than failing a test that passed.
+        }
     }
 
     public async Task<HttpClient> CreateParentAsync(string email = "parent@example.com")
