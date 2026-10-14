@@ -515,3 +515,15 @@ dialog.confirm::backdrop {
   text-decoration: none;
   margin-left: 0.15rem;
 }
+
+/* App picker (search field + button, replaces long dropdowns) */
+.app-picker {
+  max-width: 460px;
+}
+/* In a row (e.g. "Not recognised yet") it takes the free width; in a stacked label it keeps its natural height. */
+.rows > li > .app-picker {
+  flex: 1 1 280px;
+}
+.app-picker input {
+  min-width: 140px;
+}

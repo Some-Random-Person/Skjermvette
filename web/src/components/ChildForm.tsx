@@ -4,6 +4,7 @@ import type { AppRule, AppRuleKind, ChildRequest } from "../api/types";
 import { formatMinutes } from "../format";
 import { t } from "../i18n/t";
 import { useLoad } from "../useLoad";
+import { AppPicker } from "./AppPicker";
 import { ErrorText } from "./ErrorText";
 import { OfflineAllowanceHelp } from "./OfflineAllowanceHelp";
 
@@ -179,26 +180,16 @@ export function ChildForm({ initial, submitLabel, onSubmit }: Props) {
         {unusedApps.length > 0 && (
           <label>
             {t("rules.addRule")}
-            <select
-              value=""
-              onChange={(e) =>
+            <AppPicker
+              apps={unusedApps}
+              label={t("rules.addRule")}
+              pickLabel={(app) => t("rules.addRuleFor", { app: app.name })}
+              onPick={(app) =>
                 update({
-                  rules: [
-                    ...form.rules,
-                    { appId: e.target.value, kind: "Limited", limitMinutes: 30 },
-                  ],
+                  rules: [...form.rules, { appId: app.id, kind: "Limited", limitMinutes: 30 }],
                 })
               }
-            >
-              <option value="" disabled>
-                {t("rules.chooseApp")}
-              </option>
-              {unusedApps.map((app) => (
-                <option key={app.id} value={app.id}>
-                  {app.name}
-                </option>
-              ))}
-            </select>
+            />
           </label>
         )}
       </section>

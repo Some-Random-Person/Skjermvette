@@ -7,6 +7,7 @@ import {
   type MatcherKind,
   type UnassignedIdentifier,
 } from "../api/types";
+import { AppPicker } from "../components/AppPicker";
 import { ErrorText } from "../components/ErrorText";
 import { appSuggestionEmail } from "../config";
 import { useConfirm } from "../confirm/useConfirm";
@@ -47,6 +48,17 @@ export function AppsPage() {
 }
 
 type Run = (action: () => Promise<unknown>) => Promise<void>;
+
+/** Creates a family app and assigns the identifier to it; removes the app again if assigning fails. */
+async function createAndAssign(name: string, item: UnassignedIdentifier) {
+  const app = await api.createApp(name);
+  try {
+    await api.addIdentifier(app.id, item.kind, item.rawIdentifier);
+  } catch (err) {
+    await api.deleteApp(app.id).catch(() => undefined);
+    throw err;
+  }
+}
 
 /**
  * A mailto: link suggesting a family's identifier for the built-in catalog, or undefined when suggestions
@@ -92,22 +104,16 @@ function Unassigned({
                   })}
                 </span>
               </div>
-              <select
-                value=""
-                aria-label={t("apps.assignTo")}
-                onChange={(e) =>
-                  void run(() => api.addIdentifier(e.target.value, item.kind, item.rawIdentifier))
+              <AppPicker
+                apps={apps}
+                label={t("apps.assignTo")}
+                pickLabel={(app) => t("apps.assignToApp", { app: app.name })}
+                onPick={(app) =>
+                  run(() => api.addIdentifier(app.id, item.kind, item.rawIdentifier))
                 }
-              >
-                <option value="" disabled>
-                  {t("apps.assignTo")}
-                </option>
-                {apps.map((app) => (
-                  <option key={app.id} value={app.id}>
-                    {app.name}
-                  </option>
-                ))}
-              </select>
+                createLabel={(name) => t("apps.createAndAssign", { name })}
+                onCreate={(name) => run(() => createAndAssign(name, item))}
+              />
             </li>
           ))}
         </ul>
