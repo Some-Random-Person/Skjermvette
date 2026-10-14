@@ -5,8 +5,8 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using ScreenTime.Core.DeviceApi;
 using ScreenTime.Core.Models;
 using ScreenTime.Server.Contracts;
@@ -28,15 +28,18 @@ public class ServerFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
-        builder.UseSetting("ConnectionStrings:DefaultConnection", $"Data Source={_dbPath}");
+        // No pooling: the file can be deleted as soon as the server stops, without clearing pools.
+        // SqliteConnection.ClearAllPools() is process-wide and closed connections other tests (running in
+        // parallel) were still using, which made random tests fail with a 500 under load (#22).
+        builder.UseSetting("ConnectionStrings:DefaultConnection", $"Data Source={_dbPath};Pooling=False");
         builder.UseSetting("Database:Provider", "Sqlite");
         builder.ConfigureTestServices(services => services.AddSingleton<TimeProvider>(Clock));
+        builder.ConfigureLogging(logging => logging.AddProvider(new ServerErrorLog()));
     }
 
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);
-        SqliteConnection.ClearAllPools();
         try
         {
             File.Delete(_dbPath);
