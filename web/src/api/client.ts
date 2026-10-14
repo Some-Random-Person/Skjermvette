@@ -60,6 +60,11 @@ export const api = {
   register: (email: string, password: string) =>
     request<Me>("POST", "/api/auth/register", { email, password }),
   logout: () => request<void>("POST", "/api/auth/logout"),
+  updateName: (name: string) => request<Me>("PUT", "/api/account/name", { name }),
+  changeEmail: (newEmail: string, currentPassword: string) =>
+    request<Me>("PUT", "/api/account/email", { newEmail, currentPassword }),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<void>("PUT", "/api/account/password", { currentPassword, newPassword }),
 
   children: () => request<Child[]>("GET", "/api/children"),
   child: (id: string) => request<Child>("GET", `/api/children/${id}`),

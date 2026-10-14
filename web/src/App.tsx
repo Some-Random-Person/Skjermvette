@@ -11,6 +11,7 @@ import { DevicesTab } from "./pages/DevicesTab";
 import { LoginPage } from "./pages/LoginPage";
 import { NewChildPage } from "./pages/NewChildPage";
 import { RulesTab } from "./pages/RulesTab";
+import { SettingsPage } from "./pages/SettingsPage";
 import { TodayTab } from "./pages/TodayTab";
 
 function RequireSignIn() {
@@ -37,6 +38,7 @@ export function App() {
                   <Route path="devices" element={<DevicesTab />} />
                 </Route>
                 <Route path="apps" element={<AppsPage />} />
+                <Route path="settings" element={<SettingsPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Route>
             </Route>

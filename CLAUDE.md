@@ -137,7 +137,8 @@ Project root: `C:\dev\Test`. Remote: `github.com/Some-Random-Person/ScreenTimeMa
 - **Error handling:** built-in ProblemDetails (`AddProblemDetails()`, `TypedResults.Problem` / `ValidationProblem`). No result-wrapper type. Malformed requests are 400, not 500.
 - **JSON:** enums are serialized as strings, both over HTTP and over SignalR.
 - **Auth:**
-  - Parents: ASP.NET Core Identity with cookie auth.
+  - Parents: ASP.NET Core Identity with cookie auth. Optional `DisplayName` (max 100).
+  - Account settings (`/api/account/name|email|password`): changing email or password needs the current password. Email changes have **no confirmation email** (the server doesn't send email), so the dashboard asks for the address twice. `/api/auth/me` reads the user from the database.
   - Devices: pair with a 6-digit code that is exchanged for a long-lived device token. Only the token's hash is stored.
 - **Device API:**
   - `POST /api/device/usage`: batched events, idempotent by client event GUID.
@@ -172,13 +173,13 @@ Project root: `C:\dev\Test`. Remote: `github.com/Some-Random-Person/ScreenTimeMa
   - React + Vite + TypeScript, with React Router for pages.
   - The production build goes into `src/ScreenTime.Server/wwwroot` (gitignored). The server serves it with an `index.html` fallback for page URLs; unknown `/api/...` paths stay 404.
   - In development, run Vite (`npm run dev`, port 5173). It forwards `/api` and `/hubs` to the server on port 5131, so the auth cookie stays same-origin.
-  - Pages: sign in / register, children overview, child (Today / Rules / Devices tabs), add child, apps (catalog, identifiers, "not recognised yet").
+  - Pages: sign in / register, children overview, child (Today / Rules / Devices tabs), add child, apps (catalog, identifiers, "not recognised yet"), settings (name, email, password, appearance).
   - Plain CSS in `src/index.css` with CSS variables. No CSS framework.
   - **Colours:** the user's palette (2026-10-14). **Dark is the default** (`:root`), and light is `body.light`.
     - Each colour is given in `hsl` (fallback) and then `oklch`. Use only these variables (`--bg-dark`, `--bg`, `--bg-light`, `--text`, `--text-muted`, `--highlight`, `--border`, `--border-muted`, `--primary`, `--secondary`, `--danger`, `--warning`, `--success`, `--info`); don't add raw colours (transparent black for shadows and the dialog backdrop is the only exception).
     - Usage: page `--bg`, cards `--bg-light`, top bar `--bg-dark`, dividers `--border-muted`, inputs `--border`, family-made apps `--secondary`.
   - **Theme switch:** Device (default, follows the system) / Light / Dark.
-    - Saved in the browser (`localStorage` key `theme`; nothing is stored for Device). Code in `src/theme.ts` and `ThemeSwitcher`, shown in the top bar and on the sign-in page.
+    - Saved in the browser (`localStorage` key `theme`; nothing is stored for Device). Code in `src/theme.ts` and `ThemeSwitcher`. It's shown on the Settings page (Appearance) and on the sign-in page, so signed-out visitors can change it too.
     - A small inline script in `index.html` applies the saved theme before the page draws (no flash). Keep it in step with `theme.ts`.
   - **All UI strings** live in `web/src/i18n/en.json` and are read with `t(key, params)`. Don't hard-code text in components.
   - Data:
