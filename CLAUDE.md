@@ -19,7 +19,9 @@ Project root: `C:\dev\Test`. Remote: `github.com/Some-Random-Person/ScreenTimeMa
   - **Exempt apps**, e.g. Teams. Never blocked and never counted toward the total, but still recorded for reporting.
   - When the total runs out, everything is blocked except exempt apps and a system allowlist (Settings, the dashboard, phone/emergency on mobile).
 - **Counting:**
-  - Usage is **added up across devices**. Simultaneous use is not merged: 10 min on the phone + 10 min on the PC = 20 min.
+  - **One minute counts as one minute.** Usage from every device counts, but time when several apps or devices are in use at once counts only once (the server merges overlapping time): 10 min on the phone and 10 min on the PC *at the same time* = 10 min. Changed by the user on 2026-10-14; it was previously added up.
+  - The same goes for each app's limit: YouTube on two devices at once counts 1 min of YouTube per minute.
+  - **Background audio counts toward the playing app's own limit** (e.g. YouTube playing in a hidden tab), but not twice toward the total. Agents report everything in use: the foreground app plus any app playing audio.
   - **Websites count** toward the matching app. youtube.com in a browser = YouTube, and subdomains match.
   - Idle time doesn't count: no input for 2 min **and** no audio playing.
 - **Logical apps:**

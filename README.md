@@ -19,7 +19,8 @@ With those rules:
 - After 30 min of YouTube, YouTube is blocked everywhere, and 1 h 30 min is left for other apps.
 - Using Teams for 30 min leaves the remaining total unchanged.
 - 15 min of YouTube on the phone leaves only 15 min of YouTube on the PC.
-- Time is **added up across devices**. 10 min on the phone and 10 min on the PC at the same time count as 20 min.
+- **One minute counts as one minute.** Time used on several apps or devices *at the same time* counts once: 10 min on the phone and 10 min on the PC at the same time count as 10 min. Each app's limit works the same way.
+- **Background audio counts** toward that app's own limit: YouTube playing in a hidden browser tab still uses YouTube's 30 minutes (but not extra daily time).
 - **Websites count too.** youtube.com in a browser counts as YouTube.
 
 ### Offline allowance
