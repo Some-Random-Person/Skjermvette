@@ -39,7 +39,7 @@ public static class DeviceEndpoints
         Guid? childId, ClaimsPrincipal user, AppDbContext db, TimeProvider time, CancellationToken ct)
     {
         var devices = await db.Devices.AsNoTracking().Include(d => d.Lease)
-            .Where(d => d.Child.FamilyId == user.GetFamilyId() && (childId == null || d.ChildId == childId))
+            .Where(d => d.Child.FamilyId == user.GetFamilyId() && d.UnpairedAtUtc == null && (childId == null || d.ChildId == childId))
             .OrderBy(d => d.Name)
             .ToListAsync(ct);
         var now = time.GetUtcNow().UtcDateTime;
@@ -63,7 +63,7 @@ public static class DeviceEndpoints
             });
         }
 
-        var device = await db.Devices.FirstOrDefaultAsync(d => d.Id == id && d.Child.FamilyId == user.GetFamilyId(), ct);
+        var device = await FindPairedAsync(db, user, id, ct);
         if (device is null)
             return TypedResults.NotFound();
 
@@ -73,17 +73,20 @@ public static class DeviceEndpoints
         return TypedResults.NoContent();
     }
 
-    /// <summary>Unpairs a device: its token stops working. Its past usage is kept.</summary>
+    /// <summary>
+    /// Unpairs a device: its token stops working and it disappears from the dashboard.
+    /// Its usage is kept, so time it used today still counts.
+    /// </summary>
     private static async Task<Results<NoContent, NotFound>> UnpairAsync(
-        Guid id, ClaimsPrincipal user, AppDbContext db, BudgetService budget, CancellationToken ct)
+        Guid id, ClaimsPrincipal user, AppDbContext db, BudgetService budget, TimeProvider time, CancellationToken ct)
     {
-        var device = await db.Devices.FirstOrDefaultAsync(d => d.Id == id && d.Child.FamilyId == user.GetFamilyId(), ct);
+        var device = await FindPairedAsync(db, user, id, ct);
         if (device is null)
             return TypedResults.NotFound();
 
-        // Keep usage (it still counts today), but give the device a token nobody knows and release its allowance.
+        // Keep the row for its usage, but give it a token nobody knows and release its offline allowance.
+        device.UnpairedAtUtc = time.GetUtcNow().UtcDateTime;
         device.TokenHash = DeviceTokenHandler.Hash(DeviceTokenHandler.NewToken());
-        device.Name = $"{device.Name} (unpaired)";
         await db.DeviceLeases.Where(l => l.DeviceId == id).ExecuteDeleteAsync(ct);
         await db.SaveChangesAsync(ct);
 
@@ -160,6 +163,10 @@ public static class DeviceEndpoints
     /// <summary>Renews the device's offline allowance without uploading usage.</summary>
     private static async Task<Ok<SyncResponse>> LeaseAsync(ClaimsPrincipal user, BudgetService budget, CancellationToken ct) =>
         TypedResults.Ok(await budget.SyncAsync(user.GetDeviceId(), user.GetChildId(), user.GetFamilyId(), [], ct));
+
+    /// <summary>A device of the signed-in parent's family that hasn't been unpaired.</summary>
+    private static Task<Device?> FindPairedAsync(AppDbContext db, ClaimsPrincipal user, Guid id, CancellationToken ct) =>
+        db.Devices.FirstOrDefaultAsync(d => d.Id == id && d.UnpairedAtUtc == null && d.Child.FamilyId == user.GetFamilyId(), ct);
 
     private static Dictionary<string, string[]> ValidateEvents(IReadOnlyList<UsageEventDto> events, DateTimeOffset now)
     {

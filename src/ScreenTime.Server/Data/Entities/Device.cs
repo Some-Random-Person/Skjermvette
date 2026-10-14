@@ -16,6 +16,12 @@ public class Device
     public DateTime PairedAtUtc { get; set; }
     public DateTime? LastSeenAtUtc { get; set; }
 
+    /// <summary>
+    /// Set when the parent unpairs the device. The row is kept so its usage still counts, but the device
+    /// is hidden everywhere and its token no longer works.
+    /// </summary>
+    public DateTime? UnpairedAtUtc { get; set; }
+
     /// <summary>Overrides the child's offline allowance for this device when set.</summary>
     public TimeSpan? OfflineAllowanceOverride { get; set; }
 

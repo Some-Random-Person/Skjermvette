@@ -34,7 +34,7 @@ public class DeviceTokenHandler(
 
         var hash = Hash(token);
         var device = await db.Devices.AsNoTracking()
-            .Where(d => d.TokenHash == hash)
+            .Where(d => d.TokenHash == hash && d.UnpairedAtUtc == null)
             .Select(d => new { d.Id, d.ChildId, d.Child.FamilyId })
             .FirstOrDefaultAsync(Context.RequestAborted);
         if (device is null)
