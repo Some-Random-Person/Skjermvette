@@ -102,6 +102,20 @@ public class AccountTests
     }
 
     [Fact]
+    public async Task WrongCurrentPasswords_CountTowardTheSignInLockout()
+    {
+        using var factory = new ServerFactory();
+        var parent = await factory.CreateParentAsync("ada@example.com");
+
+        for (var i = 0; i < 5; i++)
+            await parent.PutAsJsonAsync("/api/account/password", new ChangePasswordRequest("wrong-password!", "a-brand-new-passphrase"), Json);
+        var login = await factory.CreateClient().PostAsJsonAsync("/api/auth/login", new LoginRequest("ada@example.com", Password), Json);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, login.StatusCode);
+        Assert.Contains("Too many failed attempts", await login.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
     public async Task AccountEndpoints_NeedSignIn()
     {
         using var factory = new ServerFactory();

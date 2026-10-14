@@ -45,8 +45,8 @@ public static class AccountEndpoints
     {
         if (await users.GetUserAsync(principal) is not { } user)
             return TypedResults.Unauthorized();
-        if (!await users.CheckPasswordAsync(user, request.CurrentPassword ?? ""))
-            return TypedResults.ValidationProblem(Error(nameof(request.CurrentPassword), "The current password is wrong."));
+        if (await CurrentPasswordErrorAsync(signIn, user, request.CurrentPassword) is { } passwordError)
+            return TypedResults.ValidationProblem(passwordError);
 
         var email = (request.NewEmail ?? "").Trim();
         user.Email = email;
@@ -67,8 +67,8 @@ public static class AccountEndpoints
     {
         if (await users.GetUserAsync(principal) is not { } user)
             return TypedResults.Unauthorized();
-        if (!await users.CheckPasswordAsync(user, request.CurrentPassword ?? ""))
-            return TypedResults.ValidationProblem(Error(nameof(request.CurrentPassword), "The current password is wrong."));
+        if (await CurrentPasswordErrorAsync(signIn, user, request.CurrentPassword) is { } passwordError)
+            return TypedResults.ValidationProblem(passwordError);
 
         var result = await users.ChangePasswordAsync(user, request.CurrentPassword!, request.NewPassword ?? "");
         if (!result.Succeeded)
@@ -76,6 +76,21 @@ public static class AccountEndpoints
 
         await ParentSession.SignInAsync(signIn, user);
         return TypedResults.NoContent();
+    }
+
+    /// <summary>
+    /// Checks the current password. Wrong attempts count toward the same lockout as signing in,
+    /// so the password can't be guessed here instead.
+    /// </summary>
+    private static async Task<Dictionary<string, string[]>?> CurrentPasswordErrorAsync(
+        SignInManager<ParentUser> signIn, ParentUser user, string? password)
+    {
+        var result = await signIn.CheckPasswordSignInAsync(user, password ?? "", lockoutOnFailure: true);
+        if (result.Succeeded)
+            return null;
+        return Error("CurrentPassword", result.IsLockedOut
+            ? "Too many wrong attempts. Try again later."
+            : "The current password is wrong.");
     }
 
     private static Dictionary<string, string[]> Error(string field, string message) => new() { [field] = [message] };
