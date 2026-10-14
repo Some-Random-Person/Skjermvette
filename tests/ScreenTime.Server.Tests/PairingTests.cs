@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using ScreenTime.Core.DeviceApi;
+using ScreenTime.Core.Models;
 using ScreenTime.Server.Contracts;
 using ScreenTime.Server.Data.Entities;
 using static ScreenTime.Server.Tests.ServerFactory;
@@ -77,5 +78,44 @@ public class PairingTests
         (await parent.DeleteAsync($"/api/devices/{pairing.DeviceId}")).EnsureSuccessStatusCode();
 
         Assert.Equal(HttpStatusCode.Unauthorized, (await device.GetAsync("/api/device/state")).StatusCode);
+    }
+
+    [Fact]
+    public async Task UnpairedDevice_DisappearsFromTheDashboard_ButItsUsageStillCounts()
+    {
+        using var factory = new ServerFactory();
+        var parent = await factory.CreateParentAsync();
+        var child = await CreateChildAsync(parent);
+        var (phone, phonePairing) = await factory.PairDeviceAsync(parent, child.Id, "Phone");
+        var (pc, _) = await factory.PairDeviceAsync(parent, child.Id, "PC");
+        await factory.UseAsync(phone, MatcherKindEnum.Process, "notepad.exe", 20);
+
+        (await parent.DeleteAsync($"/api/devices/{phonePairing.DeviceId}")).EnsureSuccessStatusCode();
+        var devices = await parent.GetFromJsonAsync<List<DeviceResponse>>($"/api/devices?childId={child.Id}", Json);
+        var today = await parent.GetFromJsonAsync<TodayResponse>($"/api/children/{child.Id}/today", Json);
+        var pcState = await StateAsync(pc);
+
+        Assert.Equal(["PC"], devices!.Select(d => d.Name));
+        Assert.Equal(["PC"], today!.Devices.Select(d => d.Name));
+        Assert.Equal(20, today.TotalUsedMinutes, 3);
+        Assert.Equal(TimeSpan.FromMinutes(20), pcState.Snapshot.TotalUsed);
+        // The phone's offline allowance is released, so the PC sees no time set aside.
+        Assert.Equal(TimeSpan.Zero, pcState.Snapshot.TotalReserved);
+    }
+
+    [Fact]
+    public async Task UnpairedDevice_CannotBeUnpairedOrEditedAgain()
+    {
+        using var factory = new ServerFactory();
+        var parent = await factory.CreateParentAsync();
+        var child = await CreateChildAsync(parent);
+        var (_, pairing) = await factory.PairDeviceAsync(parent, child.Id, "Phone");
+
+        (await parent.DeleteAsync($"/api/devices/{pairing.DeviceId}")).EnsureSuccessStatusCode();
+        var unpairAgain = await parent.DeleteAsync($"/api/devices/{pairing.DeviceId}");
+        var rename = await parent.PutAsJsonAsync($"/api/devices/{pairing.DeviceId}", new DeviceUpdateRequest("Phone 2", null), Json);
+
+        Assert.Equal(HttpStatusCode.NotFound, unpairAgain.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, rename.StatusCode);
     }
 }

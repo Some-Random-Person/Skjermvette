@@ -18,7 +18,8 @@ public class BudgetService(AppDbContext db, TimeProvider time, IHubContext<Budge
     {
         var child = await db.Children
             .Include(c => c.AppRules)
-            .Include(c => c.Devices).ThenInclude(d => d.Lease!).ThenInclude(l => l.Apps)
+            // Unpaired devices are left out: they get no updates, hold no allowance and aren't shown. Their usage still counts.
+            .Include(c => c.Devices.Where(d => d.UnpairedAtUtc == null)).ThenInclude(d => d.Lease!).ThenInclude(l => l.Apps)
             .AsSplitQuery()
             .FirstAsync(c => c.Id == childId, ct);
 
