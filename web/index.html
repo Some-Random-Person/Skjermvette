@@ -7,6 +7,20 @@
     <title>Screen Time</title>
   </head>
   <body>
+    <script>
+      // Apply the saved theme before the page draws, so light-mode users don't see a dark flash.
+      // Same logic as src/theme.ts.
+      (function () {
+        var choice = null;
+        try {
+          choice = localStorage.getItem("theme");
+        } catch (e) {}
+        var light =
+          choice === "light" ||
+          (choice !== "dark" && window.matchMedia("(prefers-color-scheme: light)").matches);
+        if (light) document.body.classList.add("light");
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

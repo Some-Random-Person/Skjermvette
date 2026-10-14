@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Navigate } from "react-router";
 import { useAuth } from "../auth/useAuth";
 import { ErrorText } from "../components/ErrorText";
+import { ThemeSwitcher } from "../components/ThemeSwitcher";
 import { t } from "../i18n/t";
 
 export function LoginPage() {
@@ -70,6 +71,9 @@ export function LoginPage() {
           {isLogin ? t("login.toRegister") : t("login.toLogin")}
         </button>
       </form>
+      <div className="login-footer">
+        <ThemeSwitcher />
+      </div>
     </main>
   );
 }

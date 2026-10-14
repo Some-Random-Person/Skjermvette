@@ -4,6 +4,11 @@
   "nav.apps": "Apps",
   "nav.signOut": "Sign out",
 
+  "theme.label": "Theme",
+  "theme.device": "Device",
+  "theme.light": "Light",
+  "theme.dark": "Dark",
+
   "common.save": "Save",
   "common.saving": "Saving…",
   "common.saved": "Saved",

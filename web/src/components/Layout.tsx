@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from "react-router";
 import { useAuth } from "../auth/useAuth";
 import { t } from "../i18n/t";
+import { ThemeSwitcher } from "./ThemeSwitcher";
 
 export function Layout() {
   const { me, logout } = useAuth();
@@ -19,6 +20,7 @@ export function Layout() {
             <NavLink to="/apps">{t("nav.apps")}</NavLink>
           </nav>
           <div className="topbar-user">
+            <ThemeSwitcher />
             <span className="muted">{me?.email}</span>
             <button className="link" onClick={() => void logout()}>
               {t("nav.signOut")}

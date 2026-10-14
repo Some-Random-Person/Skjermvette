@@ -173,7 +173,13 @@ Project root: `C:\dev\Test`. Remote: `github.com/Some-Random-Person/ScreenTimeMa
   - The production build goes into `src/ScreenTime.Server/wwwroot` (gitignored). The server serves it with an `index.html` fallback for page URLs; unknown `/api/...` paths stay 404.
   - In development, run Vite (`npm run dev`, port 5173). It forwards `/api` and `/hubs` to the server on port 5131, so the auth cookie stays same-origin.
   - Pages: sign in / register, children overview, child (Today / Rules / Devices tabs), add child, apps (catalog, identifiers, "not recognised yet").
-  - Plain CSS in `src/index.css` with CSS variables, including dark mode. No CSS framework.
+  - Plain CSS in `src/index.css` with CSS variables. No CSS framework.
+  - **Colours:** the user's palette (2026-10-14). **Dark is the default** (`:root`), and light is `body.light`.
+    - Each colour is given in `hsl` (fallback) and then `oklch`. Use only these variables (`--bg-dark`, `--bg`, `--bg-light`, `--text`, `--text-muted`, `--highlight`, `--border`, `--border-muted`, `--primary`, `--secondary`, `--danger`, `--warning`, `--success`, `--info`); don't add raw colours.
+    - Usage: page `--bg`, cards `--bg-light`, top bar `--bg-dark`, dividers `--border-muted`, inputs `--border`, family-made apps `--secondary`.
+  - **Theme switch:** Device (default, follows the system) / Light / Dark.
+    - Saved in the browser (`localStorage` key `theme`; nothing is stored for Device). Code in `src/theme.ts` and `ThemeSwitcher`, shown in the top bar and on the sign-in page.
+    - A small inline script in `index.html` applies the saved theme before the page draws (no flash). Keep it in step with `theme.ts`.
   - **All UI strings** live in `web/src/i18n/en.json` and are read with `t(key, params)`. Don't hard-code text in components.
   - Data:
     - `src/api/client.ts` is a fetch wrapper; its errors carry the ProblemDetails message.

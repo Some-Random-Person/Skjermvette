@@ -171,7 +171,9 @@ function AppCard({ app, run }: { app: App; run: Run }) {
     <section className="card stack">
       <div className="page-header">
         <h2>{app.name}</h2>
-        <span className="badge">{app.isBuiltIn ? t("apps.builtIn") : t("apps.custom")}</span>
+        <span className={app.isBuiltIn ? "badge" : "badge badge-own"}>
+          {app.isBuiltIn ? t("apps.builtIn") : t("apps.custom")}
+        </span>
       </div>
       <div className="chips">
         {app.identifiers.map((id) => (
