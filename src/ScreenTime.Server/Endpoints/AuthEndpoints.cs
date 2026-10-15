@@ -22,6 +22,7 @@ public static class AuthEndpoints
         group.MapPost("/logout", LogoutAsync).RequireAuthorization(AppClaims.ParentPolicy);
         group.MapGet("/me", MeAsync).RequireAuthorization(AppClaims.ParentPolicy);
         group.MapPost("/confirm-email", ConfirmEmailAsync);
+        group.MapPost("/confirm-email-change", ConfirmEmailChangeAsync);
         group.MapPost("/resend-confirmation", ResendConfirmationAsync).RequireRateLimiting(EmailRateLimit);
         group.MapPost("/forgot-password", ForgotPasswordAsync).RequireRateLimiting(EmailRateLimit);
         group.MapPost("/reset-password", ResetPasswordAsync);
@@ -99,9 +100,39 @@ public static class AuthEndpoints
         var user = await users.FindByIdAsync(request.UserId.ToString());
         if (user is null || AccountEmails.DecodeToken(request.Token) is not { } token)
             return TypedResults.ValidationProblem(InvalidLink);
+        // Opening the link twice (or two requests at once) isn't an error.
+        if (user.EmailConfirmed)
+            return TypedResults.NoContent();
 
         var result = await users.ConfirmEmailAsync(user, token);
         return result.Succeeded ? TypedResults.NoContent() : TypedResults.ValidationProblem(LinkErrors(result));
+    }
+
+    /// <summary>
+    /// Changes a parent's email to the new address, with the token from the link emailed to it. Other browsers
+    /// are signed out; if this browser is signed in as the same parent, it stays signed in.
+    /// </summary>
+    private static async Task<Results<NoContent, ValidationProblem>> ConfirmEmailChangeAsync(
+        ConfirmEmailChangeRequest request, ClaimsPrincipal principal, UserManager<ParentUser> users, SignInManager<ParentUser> signIn)
+    {
+        var user = await users.FindByIdAsync(request.UserId.ToString());
+        if (user is null || AccountEmails.DecodeToken(request.Token) is not { } token)
+            return TypedResults.ValidationProblem(InvalidLink);
+
+        var email = (request.Email ?? "").Trim();
+        // Opening the link twice isn't an error, though the first one changed the security stamp the token depends on.
+        if (user.NormalizedEmail == users.NormalizeEmail(email))
+            return TypedResults.NoContent();
+        // Checks the token, marks the address as confirmed, and validates it (e.g. taken in the meantime).
+        var result = await users.ChangeEmailAsync(user, email, token);
+        if (result.Succeeded)
+            result = await users.SetUserNameAsync(user, email);
+        if (!result.Succeeded)
+            return TypedResults.ValidationProblem(LinkErrors(result));
+
+        if (users.GetUserId(principal) == user.Id.ToString())
+            await ParentSession.SignInAsync(signIn, user);
+        return TypedResults.NoContent();
     }
 
     /// <summary>
@@ -131,10 +162,10 @@ public static class AuthEndpoints
     /// <summary>
     /// Sets a new password with the token from the link in the reset email. Other browsers are signed out,
     /// a lockout from wrong passwords is lifted, and the address counts as confirmed, since the link was
-    /// sent to it. The parent then signs in with the new password.
+    /// sent to it. The parent then signs in with the new password, and gets an email about the change.
     /// </summary>
     private static async Task<Results<NoContent, ValidationProblem>> ResetPasswordAsync(
-        ResetPasswordRequest request, UserManager<ParentUser> users)
+        ResetPasswordRequest request, UserManager<ParentUser> users, AccountEmails emails)
     {
         var user = await users.FindByIdAsync(request.UserId.ToString());
         if (user is null || AccountEmails.DecodeToken(request.Token) is not { } token)
@@ -149,6 +180,7 @@ public static class AuthEndpoints
         user.LockoutEnd = null;
         user.AccessFailedCount = 0;
         await users.UpdateAsync(user);
+        await emails.SendPasswordChangedAsync(user);
         return TypedResults.NoContent();
     }
 

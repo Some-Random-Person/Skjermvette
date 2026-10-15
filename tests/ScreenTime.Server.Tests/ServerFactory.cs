@@ -96,8 +96,32 @@ public class ServerFactory : WebApplicationFactory<Program>
     /// <summary>Every email the server has sent so far, oldest first.</summary>
     public List<MimeMessage> Emails() =>
         Directory.Exists(_emailDirectory)
-            ? new DirectoryInfo(_emailDirectory).GetFiles("*.eml").OrderBy(f => f.LastWriteTimeUtc).Select(f => MimeMessage.Load(f.FullName)).ToList()
+            ? new DirectoryInfo(_emailDirectory).GetFiles("*.eml").OrderBy(f => f.LastWriteTimeUtc).Select(f => LoadEmail(f.FullName)).ToList()
             : [];
+
+    // Windows (e.g. a virus scanner) can hold a new file for a moment.
+    private static MimeMessage LoadEmail(string path)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                return MimeMessage.Load(path);
+            }
+            catch (IOException) when (attempt < 50)
+            {
+                Thread.Sleep(20);
+            }
+        }
+    }
+
+    /// <summary>Opens the link in the latest email to <paramref name="newEmail"/> confirming an email change, from <paramref name="client"/>.</summary>
+    public async Task<HttpResponseMessage> ConfirmEmailChangeAsync(HttpClient client, string newEmail)
+    {
+        var query = LinkIn((await WaitForEmailsAsync(newEmail)).Last()).Query;
+        return await client.PostAsJsonAsync("/api/auth/confirm-email-change",
+            new ConfirmEmailChangeRequest(Guid.Parse(query["userId"]), query["email"], query["token"]), Json);
+    }
 
     /// <summary>The dashboard link in an email, with its query string parsed.</summary>
     public static (Uri Url, Dictionary<string, string> Query) LinkIn(MimeMessage email)

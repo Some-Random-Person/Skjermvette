@@ -8,6 +8,7 @@ import { t } from "./i18n/t";
 import { AppsPage } from "./pages/AppsPage";
 import { ChildPage } from "./pages/ChildPage";
 import { ChildrenPage } from "./pages/ChildrenPage";
+import { ConfirmEmailChangePage } from "./pages/ConfirmEmailChangePage";
 import { ConfirmEmailPage } from "./pages/ConfirmEmailPage";
 import { DevicesTab } from "./pages/DevicesTab";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
@@ -34,6 +35,7 @@ export function App() {
             <Route element={<PublicLayout />}>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/confirm-email" element={<ConfirmEmailPage />} />
+              <Route path="/confirm-email-change" element={<ConfirmEmailChangePage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
             </Route>

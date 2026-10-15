@@ -70,7 +70,9 @@ export const api = {
   logout: () => request<void>("POST", "/api/auth/logout"),
   updateName: (name: string) => request<Me>("PUT", "/api/account/name", { name }),
   changeEmail: (newEmail: string, currentPassword: string) =>
-    request<Me>("PUT", "/api/account/email", { newEmail, currentPassword }),
+    request<void>("PUT", "/api/account/email", { newEmail, currentPassword }),
+  confirmEmailChange: (userId: string, email: string, token: string) =>
+    request<void>("POST", "/api/auth/confirm-email-change", { userId, email, token }),
   changePassword: (currentPassword: string, newPassword: string) =>
     request<void>("PUT", "/api/account/password", { currentPassword, newPassword }),
   accountDeletion: () => request<AccountDeletion>("GET", "/api/account/deletion"),

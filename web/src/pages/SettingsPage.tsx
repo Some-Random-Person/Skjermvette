@@ -62,22 +62,19 @@ function NameSection() {
 }
 
 function EmailSection() {
-  const { me, setMe } = useAuth();
+  const { me } = useAuth();
   const [email, setEmail] = useState("");
-  const [repeat, setRepeat] = useState("");
   const [password, setPassword] = useState("");
-  const { run, busy, error, done, setError } = useAction();
+  /** The new address a confirmation link was sent to. */
+  const [sentTo, setSentTo] = useState<string>();
+  const { run, busy, error } = useAction();
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (email.trim().toLowerCase() !== repeat.trim().toLowerCase()) {
-      setError(t("settings.emailMismatch"));
-      return;
-    }
-    const ok = await run(async () => setMe(await api.changeEmail(email.trim(), password)));
-    if (ok) {
+    const newEmail = email.trim();
+    if (await run(() => api.changeEmail(newEmail, password))) {
+      setSentTo(newEmail);
       setEmail("");
-      setRepeat("");
       setPassword("");
     }
   };
@@ -87,28 +84,16 @@ function EmailSection() {
       <h2>{t("settings.emailTitle")}</h2>
       <p className="muted">{t("settings.emailHelp")}</p>
       <p>{t("settings.currentEmail", { email: me?.email ?? "" })}</p>
-      <div className="two-col">
-        <label>
-          {t("settings.newEmail")}
-          <input
-            type="email"
-            required
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </label>
-        <label>
-          {t("settings.repeatEmail")}
-          <input
-            type="email"
-            required
-            autoComplete="email"
-            value={repeat}
-            onChange={(e) => setRepeat(e.target.value)}
-          />
-        </label>
-      </div>
+      <label>
+        {t("settings.newEmail")}
+        <input
+          type="email"
+          required
+          autoComplete="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+      </label>
       <label>
         {t("settings.currentPassword")}
         <input
@@ -124,7 +109,7 @@ function EmailSection() {
           {t("settings.emailSubmit")}
         </button>
       </div>
-      {done && <p className="ok">{t("settings.emailChanged")}</p>}
+      {sentTo && <p className="ok">{t("settings.emailSent", { email: sentTo })}</p>}
       <ErrorText error={error} />
     </form>
   );

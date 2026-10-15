@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
@@ -7,6 +8,7 @@ using ScreenTime.Server.Auth;
 using ScreenTime.Server.Contracts;
 using ScreenTime.Server.Data;
 using ScreenTime.Server.Data.Entities;
+using ScreenTime.Server.Services;
 
 namespace ScreenTime.Server.Endpoints;
 
@@ -42,33 +44,39 @@ public static class AccountEndpoints
     }
 
     /// <summary>
-    /// Changes the email used to sign in. Needs the current password. There's no confirmation email
-    /// (the server doesn't send email), so the dashboard asks for the new address twice.
+    /// Asks to change the email used to sign in. Needs the current password. Nothing changes until the link
+    /// emailed to the new address is opened (<c>/api/auth/confirm-email-change</c>); the current address is
+    /// told about the request.
     /// </summary>
-    private static async Task<Results<Ok<MeResponse>, ValidationProblem, UnauthorizedHttpResult>> ChangeEmailAsync(
-        ChangeEmailRequest request, ClaimsPrincipal principal, UserManager<ParentUser> users, SignInManager<ParentUser> signIn)
+    private static async Task<Results<NoContent, ValidationProblem, UnauthorizedHttpResult>> ChangeEmailAsync(
+        ChangeEmailRequest request, ClaimsPrincipal principal, UserManager<ParentUser> users, SignInManager<ParentUser> signIn,
+        AccountEmails emails)
     {
         if (await users.GetUserAsync(principal) is not { } user)
             return TypedResults.Unauthorized();
         if (await CurrentPasswordErrorAsync(signIn, user, request.CurrentPassword) is { } passwordError)
             return TypedResults.ValidationProblem(passwordError);
 
+        // The same checks Identity makes when the change is confirmed, so mistakes show up now.
         var email = (request.NewEmail ?? "").Trim();
-        user.Email = email;
-        user.UserName = email;
-        // UpdateAsync validates the address and that no other account uses it.
-        var result = await users.UpdateAsync(user);
-        if (!result.Succeeded)
-            return TypedResults.ValidationProblem(ParentSession.Errors(result));
+        if (!new EmailAddressAttribute().IsValid(email))
+            return TypedResults.ValidationProblem(ParentSession.Errors(IdentityResult.Failed(users.ErrorDescriber.InvalidEmail(email))));
+        if (users.NormalizeEmail(email) == user.NormalizedEmail)
+            return TypedResults.ValidationProblem(Error(nameof(request.NewEmail), "That's already your email."));
+        if (await users.FindByEmailAsync(email) is not null)
+            return TypedResults.ValidationProblem(ParentSession.Errors(IdentityResult.Failed(users.ErrorDescriber.DuplicateEmail(email))));
 
-        await users.UpdateSecurityStampAsync(user);
-        await ParentSession.SignInAsync(signIn, user);
-        return TypedResults.Ok(MeResponse.From(user));
+        await emails.SendEmailChangeAsync(user, email);
+        return TypedResults.NoContent();
     }
 
-    /// <summary>Changes the password. Needs the current password; this browser stays signed in.</summary>
+    /// <summary>
+    /// Changes the password. Needs the current password; this browser stays signed in, and the parent gets
+    /// an email about it, with a link to reset the password if it wasn't them.
+    /// </summary>
     private static async Task<Results<NoContent, ValidationProblem, UnauthorizedHttpResult>> ChangePasswordAsync(
-        ChangePasswordRequest request, ClaimsPrincipal principal, UserManager<ParentUser> users, SignInManager<ParentUser> signIn)
+        ChangePasswordRequest request, ClaimsPrincipal principal, UserManager<ParentUser> users, SignInManager<ParentUser> signIn,
+        AccountEmails emails)
     {
         if (await users.GetUserAsync(principal) is not { } user)
             return TypedResults.Unauthorized();
@@ -80,6 +88,7 @@ public static class AccountEndpoints
             return TypedResults.ValidationProblem(ParentSession.Errors(result));
 
         await ParentSession.SignInAsync(signIn, user);
+        await emails.SendPasswordChangedAsync(user);
         return TypedResults.NoContent();
     }
 

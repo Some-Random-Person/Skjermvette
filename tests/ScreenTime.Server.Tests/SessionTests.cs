@@ -65,6 +65,7 @@ public class SessionTests
 
         (await parent.PutAsJsonAsync("/api/account/email", new ChangeEmailRequest("ada.new@example.com", Password), Json))
             .EnsureSuccessStatusCode();
+        (await factory.ConfirmEmailChangeAsync(parent, "ada.new@example.com")).EnsureSuccessStatusCode();
         factory.Clock.Advance(PastRecheck);
 
         Assert.Equal(HttpStatusCode.Unauthorized, (await otherBrowser.GetAsync("/api/children")).StatusCode);
