@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using ScreenTime.Server.Auth;
 using ScreenTime.Server.Contracts;
 using static ScreenTime.Server.Tests.ServerFactory;
@@ -51,6 +52,58 @@ public class AccountEmailTests
         Assert.Equal($"{PublicUrl}confirm-email", url.GetLeftPart(UriPartial.Path));
         Assert.Equal(HttpStatusCode.NoContent, confirm.StatusCode);
         Assert.Equal(HttpStatusCode.OK, afterConfirming.StatusCode);
+    }
+
+    [Fact]
+    public async Task Register_WithATakenAddress_RepliesTheSame_AndEmailsTheOwner()
+    {
+        using var factory = new ServerFactory();
+        await factory.CreateParentAsync(Email);
+        await factory.WaitForEmailsAsync(Email);
+
+        var response = await factory.CreateClient().PostAsJsonAsync("/api/auth/register",
+            new RegisterRequest(Email.ToUpperInvariant(), "someone-elses-password"), Json);
+        var email = (await factory.WaitForEmailsAsync(Email, 2))[1];
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal("You already have a Screen Time account", email.Subject);
+        Assert.Contains($"{PublicUrl}login", email.TextBody);
+        Assert.Contains($"{PublicUrl}forgot-password", email.TextBody);
+        Assert.Equal(HttpStatusCode.OK, (await LoginAsync(factory)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await LoginAsync(factory, "someone-elses-password")).StatusCode);
+    }
+
+    [Theory]
+    [InlineData("short")]
+    [InlineData("")]
+    public async Task Register_WithABadPassword_IsTheSameProblemWhetherOrNotTheAddressIsTaken(string password)
+    {
+        using var factory = new ServerFactory();
+        await factory.CreateParentAsync("bob@example.com");
+        var client = factory.CreateClient();
+
+        var taken = await client.PostAsJsonAsync("/api/auth/register", new RegisterRequest("bob@example.com", password), Json);
+        var free = await client.PostAsJsonAsync("/api/auth/register", new RegisterRequest(Email, password), Json);
+
+        Assert.Equal(HttpStatusCode.BadRequest, free.StatusCode);
+        Assert.Equal(await ErrorsIn(free), await ErrorsIn(taken));
+    }
+
+    private static async Task<string> ErrorsIn(HttpResponseMessage response) =>
+        (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("errors").GetRawText();
+
+    [Fact]
+    public async Task Register_IsRateLimited()
+    {
+        using var factory = new ServerFactory();
+        var client = factory.CreateClient();
+
+        var responses = new List<HttpStatusCode>();
+        for (var i = 0; i < 11; i++)
+            responses.Add((await client.PostAsJsonAsync("/api/auth/register", new RegisterRequest(Email, Password), Json)).StatusCode);
+
+        Assert.All(responses[..10], s => Assert.Equal(HttpStatusCode.NoContent, s));
+        Assert.Equal(HttpStatusCode.TooManyRequests, responses[10]);
     }
 
     [Fact]

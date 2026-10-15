@@ -21,6 +21,16 @@ public class AccountEmails(UserManager<ParentUser> users, EmailSettings settings
         Send(user.Email!, "resetPassword", new() { ["link"] = await ResetLinkAsync(user) });
     }
 
+    /// <summary>Tells an address that already has an account that someone tried to create another one with it.</summary>
+    public void SendRegisterAttempt(ParentUser user)
+    {
+        Send(user.Email!, "registerAttempt", new()
+        {
+            ["signInLink"] = new Uri(settings.PublicUrl, "login").ToString(),
+            ["forgotLink"] = new Uri(settings.PublicUrl, "forgot-password").ToString(),
+        });
+    }
+
     /// <summary>
     /// Sends a confirmation link to the new address, and tells the current address about the request,
     /// with a link to reset the password if it wasn't them. A reset cancels the change, since it changes
