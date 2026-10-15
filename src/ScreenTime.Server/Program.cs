@@ -68,6 +68,10 @@ builder.Services.AddIdentityCore<ParentUser>(options =>
     .AddSignInManager()
     .AddClaimsPrincipalFactory<ParentClaimsFactory>();
 
+// PBKDF2-HMAC-SHA512 iterations for parent passwords. Identity's default is 100,000; OWASP recommends at
+// least 210,000. About 0.2 s per sign-in. Older hashes are upgraded automatically at the next sign-in.
+builder.Services.Configure<PasswordHasherOptions>(options => options.IterationCount = ParentSession.PasswordHashIterations);
+
 // AddIdentityCore doesn't register the security stamp validator that AddIdentity would.
 builder.Services.AddScoped<ISecurityStampValidator, SecurityStampValidator<ParentUser>>();
 // The cookie and the re-check use the app's clock, so tests can move time forward.
