@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\ScreenTime.Agent.Helper\ScreenTime.Agent.Helper.csproj" />
     <ProjectReference Include="..\..\src\ScreenTime.Agent.Service\ScreenTime.Agent.Service.csproj" />
     <!-- The real server in memory (ServerFactory), to test the agent against it. -->
     <ProjectReference Include="..\ScreenTime.Server.Tests\ScreenTime.Server.Tests.csproj" />
