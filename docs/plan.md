@@ -29,7 +29,7 @@ In production the server runs in Docker with Postgres, behind a **Cloudflare Tun
 | 1 | Core budget engine (`BudgetCalculator`, `AppResolver`, `TimeWindow`) with tests | Done (#3, overlap rule #19) |
 | 2 | Server: EF Core, parent auth, pairing, device API, SignalR, offline allowance | Done (#5, then #20, #23, #26, #32, #35) |
 | 3 | FakeDevice tool | Done (#14, #21) |
-| 4 | **Windows agent**: Service + Helper | **Next** |
+| 4 | **Windows agent**: Service + Helper | **In progress.** Done: the Service's sync loop (pairing, token, outbox, offline allowance, live updates, unpairing). Next: Helper tracking + pipe to the Service, then audio, then enforcement (overlay, closing apps, browser policies), then launching the Helper from the Service and installing |
 | 5 | **Browser extension** + native messaging host registration | To do |
 | 6 | Parent dashboard | Done, moved ahead of 4–5 (#9, then #12, #13, #24, #25, #26) |
 | 7 | **Deploy files** (`deploy/docker-compose.yml`, self-hosting README) | To do, together with #6 (forwarded headers behind the tunnel). The README must say that database backups keep data from deleted accounts (#31). The server image must use ASP.NET Core runtime 10.0.13 or later (security fixes, #39) |
@@ -55,12 +55,13 @@ In production the server runs in Docker with Postgres, behind a **Cloudflare Tun
   - `DeviceApi/`: request and response types for the device API, shared by the server, FakeDevice and the agents.
 - `src/ScreenTime.Server/`: ASP.NET Core minimal API. Parent auth (Identity, cookie), account settings, children and rules, apps and catalog, devices and pairing, the device API, the SignalR `BudgetHub`. It also serves the built dashboard from `wwwroot`.
 - `web/`: React + Vite + TypeScript dashboard.
-- `tests/ScreenTime.Core.Tests/`, `tests/ScreenTime.Server.Tests/` (xUnit, `WebApplicationFactory`, SQLite).
+- `src/ScreenTime.Agent.Service/` (part): pairing and `forget` commands, the device token (DPAPI, folder open only to SYSTEM and Administrators), the SQLite outbox, the 15-second check-in, the SignalR connection, the offline allowance and stopping when unpaired. See its `CLAUDE.md`.
+- `tests/ScreenTime.Core.Tests/`, `tests/ScreenTime.Server.Tests/`, `tests/ScreenTime.Agent.Tests/` (xUnit, `WebApplicationFactory`, SQLite).
 - `tools/FakeDevice/`: pairs like a real device and reports made-up usage. Use it to test across devices.
 
 **To do:**
-- `src/ScreenTime.Agent.Service/`: .NET Worker Service installed as a Windows Service (LocalSystem, auto-restart on failure).
-  - Holds the device token, protected with DPAPI, and a local SQLite outbox. Retries uploads, keeps the SignalR connection, renews the offline allowance.
+- `src/ScreenTime.Agent.Service/` (the rest): installed as a Windows Service (LocalSystem, auto-restart on failure).
+  - Receives usage samples from the Helper (named pipe) into its `UsageTracker`.
   - Enforcement:
     - closes processes of blocked apps and tells the Helper to show the block overlay;
     - sets Edge/Chrome policies in the registry: force-install the extension, disable InPrivate/Incognito, block developer mode.
