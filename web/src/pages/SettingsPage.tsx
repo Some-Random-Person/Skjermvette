@@ -424,7 +424,15 @@ function DeleteAccountSection() {
   const { setMe } = useAuth();
   const confirm = useConfirm();
   const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
   const { run, busy, error } = useAction();
+
+  const sendCode = () =>
+    run(async () => {
+      await api.sendDeletionCode();
+      setCodeSent(true);
+    });
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -452,7 +460,7 @@ function DeleteAccountSection() {
         danger: true,
       });
       if (!confirmed) return;
-      await api.deleteAccount(password);
+      await api.deleteAccount(password, code);
       setMe(null);
     });
   };
@@ -471,6 +479,21 @@ function DeleteAccountSection() {
           onChange={(e) => setPassword(e.target.value)}
         />
       </label>
+      <label>
+        {t("settings.deleteCode")}
+        <input
+          required
+          autoComplete="one-time-code"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+        />
+      </label>
+      <div className="inline">
+        <button type="button" disabled={busy} onClick={sendCode}>
+          {t("settings.deleteSendCode")}
+        </button>
+        {codeSent && <span className="ok">{t("settings.deleteCodeSent")}</span>}
+      </div>
       <div>
         <button className="danger" disabled={busy}>
           {t("settings.deleteSubmit")}

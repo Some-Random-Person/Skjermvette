@@ -36,7 +36,7 @@ In production the server runs in Docker with Postgres, behind a **Cloudflare Tun
 
 **Not built yet** (from the original plan): per-weekday rules in the rules editor.
 
-**Follow-up features**, tracked as issues (#31, delete account, #27, account emails, and #33, two-factor sign-in, are done):
+**Follow-up features**, tracked as issues (#31, delete account, #27, account emails, #33, two-factor sign-in, and its follow-ups #45 and #46, are done):
 - #28: email notifications when a child runs out of time
 - #29: invite other parents to a family
 - #30: public homepage at `/`, dashboard moved to `/dashboard`

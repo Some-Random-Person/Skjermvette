@@ -45,12 +45,21 @@ public class AccountEmails(UserManager<ParentUser> users, EmailSettings settings
     }
 
     /// <summary>Sends a new sign-in code (the second step), which replaces any earlier one.</summary>
-    public async Task SendLoginCodeAsync(ParentUser user)
+    public Task SendLoginCodeAsync(ParentUser user) => SendCodeAsync(user, "loginCode");
+
+    /// <summary>Sends a code to confirm deleting the account. It's a sign-in code, so it replaces any earlier one.</summary>
+    public Task SendDeletionCodeAsync(ParentUser user) => SendCodeAsync(user, "deletionCode");
+
+    /// <summary>
+    /// Tells the parent their sign-in security changed (<paramref name="change"/> is a <c>twoFactorChanged.*</c>
+    /// text), with a link to reset the password if it wasn't them.
+    /// </summary>
+    public async Task SendTwoFactorChangedAsync(ParentUser user, string change)
     {
-        var code = await users.GenerateTwoFactorTokenAsync(user, EmailCodeTokenProvider.ProviderName);
-        Send(user.Email!, "loginCode", new()
+        Send(user.Email!, "twoFactorChanged", new()
         {
-            ["code"] = code,
+            ["change"] = EmailTemplates.Text($"twoFactorChanged.{change}", new Dictionary<string, string>()),
+            ["link"] = await ResetLinkAsync(user),
             ["forgotLink"] = new Uri(settings.PublicUrl, "forgot-password").ToString(),
         });
     }
@@ -79,6 +88,16 @@ public class AccountEmails(UserManager<ParentUser> users, EmailSettings settings
         {
             return null;
         }
+    }
+
+    private async Task SendCodeAsync(ParentUser user, string template)
+    {
+        var code = await users.GenerateTwoFactorTokenAsync(user, EmailCodeTokenProvider.ProviderName);
+        Send(user.Email!, template, new()
+        {
+            ["code"] = code,
+            ["forgotLink"] = new Uri(settings.PublicUrl, "forgot-password").ToString(),
+        });
     }
 
     private async Task<string> ResetLinkAsync(ParentUser user) =>

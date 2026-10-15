@@ -92,8 +92,9 @@ export const api = {
   newRecoveryCodes: () => request<RecoveryCodes>("POST", "/api/account/two-factor/recovery-codes"),
   forgetBrowsers: () => request<void>("POST", "/api/account/two-factor/forget-browsers"),
   accountDeletion: () => request<AccountDeletion>("GET", "/api/account/deletion"),
-  deleteAccount: (currentPassword: string) =>
-    request<void>("DELETE", "/api/account", { currentPassword }),
+  sendDeletionCode: () => request<void>("POST", "/api/account/deletion/email-code"),
+  deleteAccount: (currentPassword: string, code: string) =>
+    request<void>("DELETE", "/api/account", { currentPassword, code }),
 
   children: () => request<Child[]>("GET", "/api/children"),
   child: (id: string) => request<Child>("GET", `/api/children/${id}`),

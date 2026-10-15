@@ -90,6 +90,15 @@ public class ServerFactory : WebApplicationFactory<Program>
             new LoginCodeRequest(TwoFactorMethodEnum.Email, await NewEmailCodeAsync(email), false), Json)).EnsureSuccessStatusCode();
     }
 
+    /// <summary>Sets up the authenticator app for the signed-in <paramref name="parent"/>; returns its key and the recovery codes.</summary>
+    public static async Task<(string Key, IReadOnlyList<string> RecoveryCodes)> EnableAppAsync(HttpClient parent)
+    {
+        var setup = await (await parent.PostAsync("/api/account/two-factor/app/setup", null)).Content.ReadFromJsonAsync<AuthenticatorSetupResponse>(Json);
+        var response = await parent.PostAsJsonAsync("/api/account/two-factor/app", new EnableAuthenticatorRequest(Totp.Code(setup!.Key)), Json);
+        response.EnsureSuccessStatusCode();
+        return (setup.Key, (await response.Content.ReadFromJsonAsync<RecoveryCodesResponse>(Json))!.Codes);
+    }
+
     /// <summary>
     /// A new sign-in code for <paramref name="email"/>, made directly rather than read from an email (faster). It
     /// replaces the one emailed at sign-in.

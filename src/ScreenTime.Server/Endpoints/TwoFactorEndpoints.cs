@@ -6,6 +6,7 @@ using QRCoder;
 using ScreenTime.Server.Auth;
 using ScreenTime.Server.Contracts;
 using ScreenTime.Server.Data.Entities;
+using ScreenTime.Server.Services;
 using static ScreenTime.Server.Endpoints.AccountEndpoints;
 
 namespace ScreenTime.Server.Endpoints;
@@ -13,6 +14,7 @@ namespace ScreenTime.Server.Endpoints;
 /// <summary>
 /// The second sign-in step, on Settings → Security: an authenticator app with recovery codes, or (without an app)
 /// a code sent by email. Turning the app on or off changes the security stamp, which signs other browsers out.
+/// Every change is emailed to the parent, with a link to reset the password if it wasn't them.
 /// </summary>
 public static class TwoFactorEndpoints
 {
@@ -71,7 +73,8 @@ public static class TwoFactorEndpoints
     /// browsers are signed out; this one stays signed in.
     /// </summary>
     private static async Task<Results<Ok<RecoveryCodesResponse>, ValidationProblem, UnauthorizedHttpResult>> EnableAppAsync(
-        EnableAuthenticatorRequest request, ClaimsPrincipal principal, UserManager<ParentUser> users, SignInManager<ParentUser> signIn)
+        EnableAuthenticatorRequest request, ClaimsPrincipal principal, UserManager<ParentUser> users, SignInManager<ParentUser> signIn,
+        AccountEmails emails)
     {
         if (await users.GetUserAsync(principal) is not { } user)
             return TypedResults.Unauthorized();
@@ -86,6 +89,7 @@ public static class TwoFactorEndpoints
         await users.SetTwoFactorEnabledAsync(user, true);
         var codes = await users.GenerateNewTwoFactorRecoveryCodesAsync(user, ParentSession.RecoveryCodeCount);
         await ParentSession.SignInAsync(signIn, user);
+        await emails.SendTwoFactorChangedAsync(user, "appOn");
         return TypedResults.Ok(new RecoveryCodesResponse([.. codes!]));
     }
 
@@ -96,7 +100,7 @@ public static class TwoFactorEndpoints
     /// </summary>
     private static async Task<Results<NoContent, ValidationProblem, UnauthorizedHttpResult>> DisableAppAsync(
         [FromBody] DisableAuthenticatorRequest request, ClaimsPrincipal principal, UserManager<ParentUser> users,
-        SignInManager<ParentUser> signIn)
+        SignInManager<ParentUser> signIn, AccountEmails emails)
     {
         if (await users.GetUserAsync(principal) is not { } user)
             return TypedResults.Unauthorized();
@@ -105,27 +109,22 @@ public static class TwoFactorEndpoints
         if (!user.TwoFactorEnabled)
             return TypedResults.ValidationProblem(Error("App", "No authenticator app is set up."));
 
-        var valid = await users.VerifyTwoFactorTokenAsync(user, users.Options.Tokens.AuthenticatorTokenProvider, ParentSession.NormalizeCode(request.Code))
-            || (await users.RedeemTwoFactorRecoveryCodeAsync(user, (request.Code ?? "").Trim())).Succeeded;
-        if (!valid)
-        {
-            await users.AccessFailedAsync(user);
-            return TypedResults.ValidationProblem(Error(nameof(request.Code), await users.IsLockedOutAsync(user)
-                ? "Too many wrong attempts. Try again later."
-                : "That code is wrong. Enter a code from the app, or one of your recovery codes."));
-        }
+        if (await CodeErrorAsync(users, user, request.Code, emailed: false,
+                "That code is wrong. Enter a code from the app, or one of your recovery codes.") is { } codeError)
+            return TypedResults.ValidationProblem(codeError);
 
         await users.SetTwoFactorEnabledAsync(user, false);
         // A new key, so the old one in the app stops working, and no recovery codes.
         await users.ResetAuthenticatorKeyAsync(user);
         await users.GenerateNewTwoFactorRecoveryCodesAsync(user, 0);
         await ParentSession.SignInAsync(signIn, user);
+        await emails.SendTwoFactorChangedAsync(user, "appOff");
         return TypedResults.NoContent();
     }
 
     /// <summary>New recovery codes, shown once. The old ones stop working.</summary>
     private static async Task<Results<Ok<RecoveryCodesResponse>, ValidationProblem, UnauthorizedHttpResult>> RegenerateRecoveryCodesAsync(
-        ClaimsPrincipal principal, UserManager<ParentUser> users)
+        ClaimsPrincipal principal, UserManager<ParentUser> users, AccountEmails emails)
     {
         if (await users.GetUserAsync(principal) is not { } user)
             return TypedResults.Unauthorized();
@@ -133,6 +132,7 @@ public static class TwoFactorEndpoints
             return TypedResults.ValidationProblem(Error("App", "Recovery codes come with an authenticator app. Set one up first."));
 
         var codes = await users.GenerateNewTwoFactorRecoveryCodesAsync(user, ParentSession.RecoveryCodeCount);
+        await emails.SendTwoFactorChangedAsync(user, "recoveryCodes");
         return TypedResults.Ok(new RecoveryCodesResponse([.. codes!]));
     }
 
@@ -141,7 +141,7 @@ public static class TwoFactorEndpoints
     /// This changes the security stamp, so other browsers are signed out too; this one stays signed in.
     /// </summary>
     private static async Task<Results<NoContent, UnauthorizedHttpResult>> ForgetBrowsersAsync(
-        ClaimsPrincipal principal, UserManager<ParentUser> users, SignInManager<ParentUser> signIn)
+        ClaimsPrincipal principal, UserManager<ParentUser> users, SignInManager<ParentUser> signIn, AccountEmails emails)
     {
         if (await users.GetUserAsync(principal) is not { } user)
             return TypedResults.Unauthorized();
@@ -149,6 +149,26 @@ public static class TwoFactorEndpoints
         await users.UpdateSecurityStampAsync(user);
         await signIn.ForgetTwoFactorClientAsync();
         await ParentSession.SignInAsync(signIn, user);
+        await emails.SendTwoFactorChangedAsync(user, "browsersForgotten");
         return TypedResults.NoContent();
+    }
+
+    /// <summary>
+    /// Checks a second-step code from a signed-in parent: from the app or a recovery code when the app is on, and
+    /// an emailed code when <paramref name="emailed"/>. Wrong codes count toward the lockout.
+    /// </summary>
+    internal static async Task<Dictionary<string, string[]>?> CodeErrorAsync(
+        UserManager<ParentUser> users, ParentUser user, string? code, bool emailed, string wrongMessage)
+    {
+        var normalized = ParentSession.NormalizeCode(code);
+        var valid = (user.TwoFactorEnabled
+                && (await users.VerifyTwoFactorTokenAsync(user, users.Options.Tokens.AuthenticatorTokenProvider, normalized)
+                    || (await users.RedeemTwoFactorRecoveryCodeAsync(user, (code ?? "").Trim())).Succeeded))
+            || (emailed && await users.VerifyTwoFactorTokenAsync(user, EmailCodeTokenProvider.ProviderName, normalized));
+        if (valid)
+            return null;
+
+        await users.AccessFailedAsync(user);
+        return Error("Code", await users.IsLockedOutAsync(user) ? "Too many wrong attempts. Try again later." : wrongMessage);
     }
 }

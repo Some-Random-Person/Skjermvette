@@ -22,6 +22,7 @@ public static class AccountEndpoints
         group.MapPut("/email", ChangeEmailAsync);
         group.MapPut("/password", ChangePasswordAsync);
         group.MapGet("/deletion", GetDeletionAsync);
+        group.MapPost("/deletion/email-code", SendDeletionCodeAsync).RequireRateLimiting(AuthEndpoints.EmailRateLimit);
         group.MapDelete("/", DeleteAsync);
     }
 
@@ -106,8 +107,24 @@ public static class AccountEndpoints
     }
 
     /// <summary>
-    /// Deletes the parent's account and signs out. Needs the current password. If no other parent is left,
-    /// the family is deleted too: children, devices, usage history, rules and the family's own apps.
+    /// Emails a code to confirm deleting the account (<c>DELETE /api/account</c>), for parents without the
+    /// authenticator app at hand. Rate limited.
+    /// </summary>
+    private static async Task<Results<NoContent, UnauthorizedHttpResult>> SendDeletionCodeAsync(
+        ClaimsPrincipal principal, UserManager<ParentUser> users, AccountEmails emails)
+    {
+        if (await users.GetUserAsync(principal) is not { } user)
+            return TypedResults.Unauthorized();
+
+        await emails.SendDeletionCodeAsync(user);
+        return TypedResults.NoContent();
+    }
+
+    /// <summary>
+    /// Deletes the parent's account and signs out. Needs the current password and a second-step code: from the
+    /// authenticator app, a recovery code, or an emailed one (<c>POST /api/account/deletion/email-code</c>). Wrong
+    /// attempts count toward the lockout. If no other parent is left, the family is deleted too: children,
+    /// devices, usage history, rules and the family's own apps.
     /// </summary>
     private static async Task<Results<NoContent, ValidationProblem, UnauthorizedHttpResult>> DeleteAsync(
         [FromBody] DeleteAccountRequest request, ClaimsPrincipal principal, UserManager<ParentUser> users,
@@ -117,6 +134,9 @@ public static class AccountEndpoints
             return TypedResults.Unauthorized();
         if (await CurrentPasswordErrorAsync(signIn, user, request.CurrentPassword) is { } passwordError)
             return TypedResults.ValidationProblem(passwordError);
+        if (await TwoFactorEndpoints.CodeErrorAsync(users, user, request.Code, emailed: true,
+                "That code is wrong or has expired. Enter a code from your authenticator app, a recovery code, or the code we emailed you.") is { } codeError)
+            return TypedResults.ValidationProblem(codeError);
 
         await using var transaction = await db.Database.BeginTransactionAsync(ct);
         var result = await users.DeleteAsync(user);
