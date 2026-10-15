@@ -19,7 +19,7 @@ public class SessionTests
     private static async Task<HttpClient> SignInElsewhereAsync(ServerFactory factory)
     {
         var client = factory.CreateClient();
-        (await client.PostAsJsonAsync("/api/auth/login", new LoginRequest(Email, Password), Json)).EnsureSuccessStatusCode();
+        await factory.SignInAsync(client, Email, Password);
         return client;
     }
 

@@ -2,14 +2,19 @@ import { t } from "../i18n/t";
 import type {
   AccountDeletion,
   App,
+  AuthenticatorSetup,
   Child,
   ChildRequest,
   Device,
   Identifier,
+  LoginResponse,
   MatcherKind,
   Me,
   PairingCode,
+  RecoveryCodes,
   Today,
+  TwoFactor,
+  TwoFactorMethod,
   UnassignedIdentifier,
 } from "./types";
 
@@ -57,7 +62,10 @@ async function errorMessage(response: Response): Promise<string> {
 export const api = {
   me: () => request<Me>("GET", "/api/auth/me"),
   login: (email: string, password: string) =>
-    request<Me>("POST", "/api/auth/login", { email, password }),
+    request<LoginResponse>("POST", "/api/auth/login", { email, password }),
+  loginCode: (method: TwoFactorMethod, code: string, rememberBrowser: boolean) =>
+    request<Me>("POST", "/api/auth/login/code", { method, code, rememberBrowser }),
+  sendLoginCode: () => request<void>("POST", "/api/auth/login/email-code"),
   register: (email: string, password: string) =>
     request<void>("POST", "/api/auth/register", { email, password }),
   confirmEmail: (userId: string, token: string) =>
@@ -75,6 +83,14 @@ export const api = {
     request<void>("POST", "/api/auth/confirm-email-change", { userId, email, token }),
   changePassword: (currentPassword: string, newPassword: string) =>
     request<void>("PUT", "/api/account/password", { currentPassword, newPassword }),
+  twoFactor: () => request<TwoFactor>("GET", "/api/account/two-factor"),
+  setupApp: () => request<AuthenticatorSetup>("POST", "/api/account/two-factor/app/setup"),
+  enableApp: (code: string) =>
+    request<RecoveryCodes>("POST", "/api/account/two-factor/app", { code }),
+  disableApp: (currentPassword: string, code: string) =>
+    request<void>("DELETE", "/api/account/two-factor/app", { currentPassword, code }),
+  newRecoveryCodes: () => request<RecoveryCodes>("POST", "/api/account/two-factor/recovery-codes"),
+  forgetBrowsers: () => request<void>("POST", "/api/account/two-factor/forget-browsers"),
   accountDeletion: () => request<AccountDeletion>("GET", "/api/account/deletion"),
   deleteAccount: (currentPassword: string) =>
     request<void>("DELETE", "/api/account", { currentPassword }),

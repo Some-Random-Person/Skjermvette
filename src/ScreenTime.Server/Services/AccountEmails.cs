@@ -2,6 +2,7 @@ using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
 using MimeKit;
+using ScreenTime.Server.Auth;
 using ScreenTime.Server.Data.Entities;
 using ScreenTime.Server.Email;
 
@@ -41,6 +42,17 @@ public class AccountEmails(UserManager<ParentUser> users, EmailSettings settings
         var token = await users.GenerateChangeEmailTokenAsync(user, newEmail);
         Send(newEmail, "changeEmail", new() { ["link"] = Link("confirm-email-change", user, token, ("email", newEmail)) });
         Send(user.Email!, "emailChangeRequested", new() { ["newEmail"] = newEmail, ["link"] = await ResetLinkAsync(user) });
+    }
+
+    /// <summary>Sends a new sign-in code (the second step), which replaces any earlier one.</summary>
+    public async Task SendLoginCodeAsync(ParentUser user)
+    {
+        var code = await users.GenerateTwoFactorTokenAsync(user, EmailCodeTokenProvider.ProviderName);
+        Send(user.Email!, "loginCode", new()
+        {
+            ["code"] = code,
+            ["forgotLink"] = new Uri(settings.PublicUrl, "forgot-password").ToString(),
+        });
     }
 
     /// <summary>Tells the parent their password changed, with a link to reset it if it wasn't them.</summary>

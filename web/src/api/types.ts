@@ -12,6 +12,32 @@ export interface Me {
   familyId: string;
 }
 
+/** The second sign-in step. `RecoveryCode` only works when the authenticator app is set up. */
+export type TwoFactorMethod = "App" | "Email" | "RecoveryCode";
+
+/** After the password: signed in (`me`, on a remembered browser), or the second step that's needed. */
+export interface LoginResponse {
+  me: Me | null;
+  secondStep: TwoFactorMethod | null;
+}
+
+/** The second step is the authenticator app when `appEnabled`, otherwise an emailed code. */
+export interface TwoFactor {
+  appEnabled: boolean;
+  recoveryCodesLeft: number;
+}
+
+/** The key for an authenticator app: as text, as an `otpauth://` link, and as a QR code (SVG). */
+export interface AuthenticatorSetup {
+  key: string;
+  uri: string;
+  qrCodeSvg: string;
+}
+
+export interface RecoveryCodes {
+  codes: string[];
+}
+
 /** What deleting the account would remove. Children and devices only go when `isLastParent`. */
 export interface AccountDeletion {
   isLastParent: boolean;
