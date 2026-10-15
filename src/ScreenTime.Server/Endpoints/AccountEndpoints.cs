@@ -141,7 +141,7 @@ public static class AccountEndpoints
     /// Checks the current password. Wrong attempts count toward the same lockout as signing in,
     /// so the password can't be guessed here instead.
     /// </summary>
-    private static async Task<Dictionary<string, string[]>?> CurrentPasswordErrorAsync(
+    internal static async Task<Dictionary<string, string[]>?> CurrentPasswordErrorAsync(
         SignInManager<ParentUser> signIn, ParentUser user, string? password)
     {
         var result = await signIn.CheckPasswordSignInAsync(user, password ?? "", lockoutOnFailure: true);
@@ -152,5 +152,5 @@ public static class AccountEndpoints
             : "The current password is wrong.");
     }
 
-    private static Dictionary<string, string[]> Error(string field, string message) => new() { [field] = [message] };
+    internal static Dictionary<string, string[]> Error(string field, string message) => new() { [field] = [message] };
 }

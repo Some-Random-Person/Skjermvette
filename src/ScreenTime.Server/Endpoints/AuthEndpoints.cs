@@ -6,6 +6,7 @@ using ScreenTime.Server.Contracts;
 using ScreenTime.Server.Data;
 using ScreenTime.Server.Data.Entities;
 using ScreenTime.Server.Services;
+using SignInResult = Microsoft.AspNetCore.Identity.SignInResult;
 
 namespace ScreenTime.Server.Endpoints;
 
@@ -19,6 +20,8 @@ public static class AuthEndpoints
         var group = app.MapGroup("/api/auth").WithTags("Auth");
         group.MapPost("/register", RegisterAsync).RequireRateLimiting(EmailRateLimit);
         group.MapPost("/login", LoginAsync);
+        group.MapPost("/login/code", LoginCodeAsync);
+        group.MapPost("/login/email-code", SendLoginCodeAsync).RequireRateLimiting(EmailRateLimit);
         group.MapPost("/logout", LogoutAsync).RequireAuthorization(AppClaims.ParentPolicy);
         group.MapGet("/me", MeAsync).RequireAuthorization(AppClaims.ParentPolicy);
         group.MapPost("/confirm-email", ConfirmEmailAsync);
@@ -61,11 +64,14 @@ public static class AuthEndpoints
     }
 
     /// <summary>
-    /// Signs a parent in with a persistent cookie. A right password on an unconfirmed address is 403,
-    /// so the dashboard can offer to send the confirmation link again.
+    /// First sign-in step: checks the password. On a browser remembered for this parent, signs in with a
+    /// persistent cookie (<c>Me</c>). Otherwise answers which second step is needed (<c>SecondStep</c>): a code
+    /// from the authenticator app, or a code that's emailed now; then <c>/api/auth/login/code</c> finishes the
+    /// sign-in. A right password on an unconfirmed address is 403, so the dashboard can offer to send the
+    /// confirmation link again.
     /// </summary>
-    private static async Task<Results<Ok<MeResponse>, ProblemHttpResult>> LoginAsync(
-        LoginRequest request, UserManager<ParentUser> users, SignInManager<ParentUser> signIn)
+    private static async Task<Results<Ok<LoginResponse>, ProblemHttpResult>> LoginAsync(
+        LoginRequest request, UserManager<ParentUser> users, ParentSignInManager signIn, AccountEmails emails)
     {
         var user = await users.FindByEmailAsync(request.Email);
         var check = user is null
@@ -74,7 +80,7 @@ public static class AuthEndpoints
         if (!check.Succeeded)
         {
             return TypedResults.Problem(
-                check.IsLockedOut ? "Too many failed attempts. Try again later." : "Wrong email or password.",
+                check.IsLockedOut ? LockedOutMessage : "Wrong email or password.",
                 statusCode: StatusCodes.Status401Unauthorized);
         }
         // Checked after the password, so this doesn't tell anyone else whether an address is confirmed.
@@ -85,9 +91,83 @@ public static class AuthEndpoints
                 statusCode: StatusCodes.Status403Forbidden);
         }
 
-        await ParentSession.SignInAsync(signIn, user);
-        return TypedResults.Ok(MeResponse.From(user));
+        if ((await signIn.SignInOrTwoFactorAsync(user)).Succeeded)
+            return TypedResults.Ok(new LoginResponse(MeResponse.From(user), null));
+        if (user.TwoFactorEnabled)
+            return TypedResults.Ok(new LoginResponse(null, TwoFactorMethodEnum.App));
+
+        await emails.SendLoginCodeAsync(user);
+        return TypedResults.Ok(new LoginResponse(null, TwoFactorMethodEnum.Email));
     }
+
+    /// <summary>
+    /// Second sign-in step: a code from the authenticator app, an emailed code, or a recovery code (only when the
+    /// app is set up). Wrong codes count toward the lockout. <c>RememberBrowser</c> skips this step on this browser
+    /// for 30 days (not with a recovery code). Using a recovery code signs other browsers out.
+    /// </summary>
+    private static async Task<Results<Ok<MeResponse>, ProblemHttpResult>> LoginCodeAsync(
+        LoginCodeRequest request, UserManager<ParentUser> users, ParentSignInManager signIn)
+    {
+        if (await signIn.GetTwoFactorAuthenticationUserAsync() is not { } user)
+            return SecondStepExpired;
+
+        var code = ParentSession.NormalizeCode(request.Code);
+        var result = request.Method switch
+        {
+            TwoFactorMethodEnum.App when user.TwoFactorEnabled =>
+                await signIn.TwoFactorAuthenticatorSignInAsync(code, isPersistent: true, request.RememberBrowser),
+            TwoFactorMethodEnum.Email =>
+                await signIn.TwoFactorSignInAsync(EmailCodeTokenProvider.ProviderName, code, isPersistent: true, request.RememberBrowser),
+            TwoFactorMethodEnum.RecoveryCode when user.TwoFactorEnabled =>
+                await RecoveryCodeSignInAsync(users, signIn, user, request.Code),
+            _ => SignInResult.Failed,
+        };
+        if (result.Succeeded)
+            return TypedResults.Ok(MeResponse.From(user));
+        return TypedResults.Problem(
+            result.IsLockedOut ? LockedOutMessage : "That code is wrong or has expired.",
+            statusCode: StatusCodes.Status401Unauthorized);
+    }
+
+    /// <summary>
+    /// Emails a new sign-in code, after the right password (<c>/api/auth/login</c>): to send it again, or instead
+    /// of the authenticator app. Rate limited.
+    /// </summary>
+    private static async Task<Results<NoContent, ProblemHttpResult>> SendLoginCodeAsync(ParentSignInManager signIn, AccountEmails emails)
+    {
+        if (await signIn.GetTwoFactorAuthenticationUserAsync() is not { } user)
+            return SecondStepExpired;
+
+        await emails.SendLoginCodeAsync(user);
+        return TypedResults.NoContent();
+    }
+
+    /// <summary>
+    /// Identity doesn't count wrong recovery codes toward the lockout, or change the security stamp when one is
+    /// used, so this does both. The sign-in is made persistent like any other.
+    /// </summary>
+    private static async Task<SignInResult> RecoveryCodeSignInAsync(
+        UserManager<ParentUser> users, ParentSignInManager signIn, ParentUser user, string? code)
+    {
+        if (await users.IsLockedOutAsync(user))
+            return SignInResult.LockedOut;
+
+        if (!(await signIn.TwoFactorRecoveryCodeSignInAsync((code ?? "").Trim())).Succeeded)
+        {
+            await users.AccessFailedAsync(user);
+            return await users.IsLockedOutAsync(user) ? SignInResult.LockedOut : SignInResult.Failed;
+        }
+
+        // A recovery code means the phone may be lost: sign other browsers out.
+        await users.UpdateSecurityStampAsync(user);
+        await ParentSession.SignInAsync(signIn, user);
+        return SignInResult.Success;
+    }
+
+    private const string LockedOutMessage = "Too many failed attempts. Try again later.";
+
+    private static ProblemHttpResult SecondStepExpired => TypedResults.Problem(
+        "Your sign-in timed out. Enter your email and password again.", statusCode: StatusCodes.Status401Unauthorized);
 
     /// <summary>Signs the parent out.</summary>
     private static async Task<NoContent> LogoutAsync(SignInManager<ParentUser> signIn)

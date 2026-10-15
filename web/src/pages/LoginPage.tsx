@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, Navigate } from "react-router";
 import { ApiError, api } from "../api/client";
+import type { TwoFactorMethod } from "../api/types";
 import { useAuth } from "../auth/useAuth";
 import { ErrorText } from "../components/ErrorText";
 import { t } from "../i18n/t";
@@ -17,6 +18,8 @@ export function LoginPage() {
   const [sentTo, setSentTo] = useState<string>();
   /** Signing in failed because the address isn't confirmed yet. */
   const [unconfirmed, setUnconfirmed] = useState(false);
+  /** The password was right; the second step the server asks for. */
+  const [secondStep, setSecondStep] = useState<TwoFactorMethod>();
 
   if (me) return <Navigate to="/" replace />;
 
@@ -27,7 +30,11 @@ export function LoginPage() {
     setUnconfirmed(false);
     try {
       if (mode === "login") {
-        await login(email, password);
+        const step = await login(email, password);
+        if (step) {
+          setSecondStep(step);
+          setPassword("");
+        }
       } else {
         await api.register(email, password);
         setSentTo(email);
@@ -40,6 +47,16 @@ export function LoginPage() {
       setBusy(false);
     }
   };
+
+  if (secondStep) {
+    return (
+      <SecondStep
+        email={email}
+        hasApp={secondStep === "App"}
+        onBack={() => setSecondStep(undefined)}
+      />
+    );
+  }
 
   if (sentTo) {
     return (
@@ -124,5 +141,116 @@ function ResendConfirmation({ email }: { email: string }) {
       </div>
       <ErrorText error={error} />
     </div>
+  );
+}
+
+/** The code after the password: from the authenticator app, from an email, or a recovery code. */
+function SecondStep({
+  email,
+  hasApp,
+  onBack,
+}: {
+  email: string;
+  hasApp: boolean;
+  onBack: () => void;
+}) {
+  const { setMe } = useAuth();
+  const [method, setMethod] = useState<TwoFactorMethod>(hasApp ? "App" : "Email");
+  const [code, setCode] = useState("");
+  const [remember, setRemember] = useState(false);
+  const { run, busy, error, setError } = useAction();
+  const resend = useAction();
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    await run(async () =>
+      setMe(await api.loginCode(method, code, remember && method !== "RecoveryCode")),
+    );
+  };
+
+  const switchTo = (next: TwoFactorMethod) => {
+    setMethod(next);
+    setCode("");
+    setError(undefined);
+    resend.clearDone();
+    if (next === "Email") void resend.run(api.sendLoginCode);
+  };
+
+  const isRecovery = method === "RecoveryCode";
+  return (
+    <form className="card stack" onSubmit={submit}>
+      <h2>{t("login.codeTitle")}</h2>
+      <p>
+        {method === "App"
+          ? t("login.codeApp")
+          : method === "Email"
+            ? t("login.codeEmail", { email })
+            : t("login.codeRecovery")}
+      </p>
+      <label>
+        {isRecovery ? t("login.recoveryCode") : t("login.code")}
+        <input
+          required
+          autoFocus
+          autoComplete="one-time-code"
+          inputMode={isRecovery ? "text" : "numeric"}
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+        />
+      </label>
+      {!isRecovery && (
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={remember}
+            onChange={(e) => setRemember(e.target.checked)}
+          />
+          <span>
+            {t("login.remember")}
+            <span className="hint block">{t("login.rememberHint")}</span>
+          </span>
+        </label>
+      )}
+      <ErrorText error={error} />
+      <button className="primary" disabled={busy}>
+        {t("login.submit")}
+      </button>
+      {method === "Email" && (
+        <div className="inline">
+          <button
+            type="button"
+            className="link"
+            disabled={resend.busy}
+            onClick={() => resend.run(api.sendLoginCode)}
+          >
+            {t("login.codeResend")}
+          </button>
+          {resend.done && <span className="ok">{t("login.codeResent")}</span>}
+        </div>
+      )}
+      <ErrorText error={resend.error} />
+      {hasApp && (
+        <div className="stack small">
+          {method !== "App" && (
+            <button type="button" className="link" onClick={() => switchTo("App")}>
+              {t("login.useApp")}
+            </button>
+          )}
+          {method !== "Email" && (
+            <button type="button" className="link" onClick={() => switchTo("Email")}>
+              {t("login.useEmail")}
+            </button>
+          )}
+          {method !== "RecoveryCode" && (
+            <button type="button" className="link" onClick={() => switchTo("RecoveryCode")}>
+              {t("login.useRecovery")}
+            </button>
+          )}
+        </div>
+      )}
+      <button type="button" className="link" onClick={onBack}>
+        {t("login.backToLogin")}
+      </button>
+    </form>
   );
 }

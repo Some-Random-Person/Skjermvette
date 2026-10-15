@@ -280,6 +280,31 @@ button,
   background: var(--bg-light);
   color: var(--text);
 }
+label.check {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-weight: normal;
+}
+label.check input {
+  margin-top: 0.3rem;
+}
+.block {
+  display: block;
+}
+.qr {
+  width: 200px;
+  height: 200px;
+  border-radius: 8px;
+}
+.codes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: 0.35rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
 input[type="number"] {
   width: 5.5rem;
 }

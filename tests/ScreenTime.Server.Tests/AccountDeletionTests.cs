@@ -125,7 +125,7 @@ public class AccountDeletionTests
         var response = await DeleteAccountAsync(parent, Password);
         var adaLogin = await factory.CreateClient().PostAsJsonAsync("/api/auth/login", new LoginRequest("ada@example.com", Password), Json);
         var bob = factory.CreateClient();
-        (await bob.PostAsJsonAsync("/api/auth/login", new LoginRequest("bob@example.com", Password), Json)).EnsureSuccessStatusCode();
+        await factory.SignInAsync(bob, "bob@example.com", Password);
 
         Assert.Equal(new AccountDeletionResponse(false, 1, 1), info);
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
@@ -140,7 +140,7 @@ public class AccountDeletionTests
         using var factory = new ServerFactory();
         var parent = await factory.CreateParentAsync("ada@example.com");
         var otherBrowser = factory.CreateClient();
-        (await otherBrowser.PostAsJsonAsync("/api/auth/login", new LoginRequest("ada@example.com", Password), Json)).EnsureSuccessStatusCode();
+        await factory.SignInAsync(otherBrowser, "ada@example.com", Password);
 
         (await DeleteAccountAsync(parent, Password)).EnsureSuccessStatusCode();
         factory.Clock.Advance(ParentSession.RecheckInterval + TimeSpan.FromSeconds(1));

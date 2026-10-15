@@ -40,8 +40,23 @@ builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
         // or a deleted account, signs other browsers out within ParentSession.RecheckInterval.
         options.Events.OnValidatePrincipal = SecurityStampValidator.ValidatePrincipalAsync;
     })
-    // Unused, but when the security stamp check rejects a sign-in, Identity also signs this scheme out.
-    .AddCookie(IdentityConstants.TwoFactorRememberMeScheme)
+    // Between the password and the second-step code (ParentSignInManager).
+    .AddCookie(IdentityConstants.TwoFactorUserIdScheme, options =>
+    {
+        options.Cookie.Name = "screentime.2fa";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Strict;
+        options.ExpireTimeSpan = ParentSession.SecondStepLifespan;
+    })
+    // "Remember this browser": skips the second step. Forgotten when the security stamp changes.
+    .AddCookie(IdentityConstants.TwoFactorRememberMeScheme, options =>
+    {
+        options.Cookie.Name = "screentime.remember";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Strict;
+        options.ExpireTimeSpan = ParentSession.RememberBrowserLifespan;
+        options.Events.OnValidatePrincipal = SecurityStampValidator.ValidateAsync<ITwoFactorSecurityStampValidator>;
+    })
     .AddScheme<AuthenticationSchemeOptions, DeviceTokenHandler>(DeviceTokenHandler.SchemeName, null);
 
 builder.Services.AddAuthorizationBuilder()
@@ -67,17 +82,20 @@ builder.Services.AddIdentityCore<ParentUser>(options =>
         options.Tokens.PasswordResetTokenProvider = PasswordResetTokenProvider.ProviderName;
     })
     .AddEntityFrameworkStores<AppDbContext>()
-    .AddSignInManager()
+    .AddSignInManager<ParentSignInManager>()
     .AddClaimsPrincipalFactory<ParentClaimsFactory>()
     .AddDefaultTokenProviders()
+    // Replaces Identity's own email provider (same name), so emailed sign-in codes are single use.
+    .AddTokenProvider<EmailCodeTokenProvider>(EmailCodeTokenProvider.ProviderName)
     .AddTokenProvider<PasswordResetTokenProvider>(PasswordResetTokenProvider.ProviderName);
 
 // PBKDF2-HMAC-SHA512 iterations for parent passwords. Identity's default is 100,000; OWASP recommends at
 // least 210,000. About 0.2 s per sign-in. Older hashes are upgraded automatically at the next sign-in.
 builder.Services.Configure<PasswordHasherOptions>(options => options.IterationCount = ParentSession.PasswordHashIterations);
 
-// AddIdentityCore doesn't register the security stamp validator that AddIdentity would.
+// AddIdentityCore doesn't register the security stamp validators that AddIdentity would.
 builder.Services.AddScoped<ISecurityStampValidator, SecurityStampValidator<ParentUser>>();
+builder.Services.AddScoped<ITwoFactorSecurityStampValidator, TwoFactorSecurityStampValidator<ParentUser>>();
 // The cookie and the re-check use the app's clock, so tests can move time forward.
 builder.Services.AddOptions<SecurityStampValidatorOptions>()
     .Configure<TimeProvider>((options, time) =>
@@ -85,8 +103,11 @@ builder.Services.AddOptions<SecurityStampValidatorOptions>()
         options.ValidationInterval = ParentSession.RecheckInterval;
         options.TimeProvider = time;
     });
-builder.Services.AddOptions<CookieAuthenticationOptions>(IdentityConstants.ApplicationScheme)
-    .Configure<TimeProvider>((options, time) => options.TimeProvider = time);
+foreach (var scheme in new[] { IdentityConstants.ApplicationScheme, IdentityConstants.TwoFactorUserIdScheme, IdentityConstants.TwoFactorRememberMeScheme })
+{
+    builder.Services.AddOptions<CookieAuthenticationOptions>(scheme)
+        .Configure<TimeProvider>((options, time) => options.TimeProvider = time);
+}
 // Email confirmation links. Password reset links have their own, shorter life (PasswordResetTokenProvider).
 // Identity checks link expiry against the system clock, not the TimeProvider.
 builder.Services.Configure<DataProtectionTokenProviderOptions>(options => options.TokenLifespan = ParentSession.ConfirmationLinkLifespan);
@@ -99,7 +120,7 @@ builder.Services.AddRateLimiter(options =>
         ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1) }));
     // Registering, forgot password and resending the confirmation link email any address typed in, so limit
-    // how many emails one sender can trigger.
+    // how many emails one sender can trigger. Sending a sign-in code again shares the limit.
     options.AddPolicy(AuthEndpoints.EmailRateLimit, ctx => RateLimitPartition.GetFixedWindowLimiter(
         ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(15) }));
@@ -157,6 +178,7 @@ if (app.Environment.IsDevelopment())
 
 app.MapAuthEndpoints();
 app.MapAccountEndpoints();
+app.MapTwoFactorEndpoints();
 app.MapChildEndpoints();
 app.MapAppEndpoints();
 app.MapDeviceEndpoints();

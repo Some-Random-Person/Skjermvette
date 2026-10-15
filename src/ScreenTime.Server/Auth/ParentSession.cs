@@ -20,6 +20,21 @@ public static class ParentSession
     /// <summary>How long a password reset link works. The email says so (<c>emails.en.json</c>).</summary>
     public static readonly TimeSpan PasswordResetLinkLifespan = TimeSpan.FromHours(1);
 
+    /// <summary>How long a sign-in code sent by email works. The email says so (<c>emails.en.json</c>).</summary>
+    public static readonly TimeSpan EmailCodeLifespan = TimeSpan.FromMinutes(10);
+
+    /// <summary>How long a parent has, after the right password, to enter the second-step code.</summary>
+    public static readonly TimeSpan SecondStepLifespan = TimeSpan.FromMinutes(15);
+
+    /// <summary>How long "remember this browser" skips the second step. The dashboard says so (<c>en.json</c>).</summary>
+    public static readonly TimeSpan RememberBrowserLifespan = TimeSpan.FromDays(30);
+
+    /// <summary>How many recovery codes a parent gets with the authenticator app.</summary>
+    public const int RecoveryCodeCount = 10;
+
+    /// <summary>A code from an authenticator app or an email, without the spaces or dashes people type.</summary>
+    public static string NormalizeCode(string? code) => (code ?? "").Replace(" ", "").Replace("-", "");
+
     /// <summary>
     /// Signs a parent in (or refreshes their cookie after an account change) with a persistent cookie.
     /// The family claim comes from <see cref="ParentClaimsFactory"/>.

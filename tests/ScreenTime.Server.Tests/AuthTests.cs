@@ -30,7 +30,7 @@ public class AuthTests
     }
 
     [Fact]
-    public async Task Login_WithRightPassword_SignsIn()
+    public async Task Login_WithRightPassword_AsksForTheSecondStep_BeforeSigningIn()
     {
         using var factory = new ServerFactory();
         await factory.CreateParentAsync("ada@example.com");
@@ -39,7 +39,8 @@ public class AuthTests
         var response = await client.PostAsJsonAsync("/api/auth/login", new LoginRequest("ada@example.com", "correct-horse-battery"), Json);
 
         response.EnsureSuccessStatusCode();
-        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/children")).StatusCode);
+        Assert.Equal(new LoginResponse(null, TwoFactorMethodEnum.Email), await response.Content.ReadFromJsonAsync<LoginResponse>(Json));
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/children")).StatusCode);
     }
 
     [Fact]

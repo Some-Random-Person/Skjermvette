@@ -62,11 +62,13 @@ public class ServerFactory : WebApplicationFactory<Program>
         }
     }
 
+    public const string DefaultPassword = "correct-horse-battery";
+
     /// <summary>Registers a parent, confirms their email (without the email round trip) and signs in.</summary>
     public async Task<HttpClient> CreateParentAsync(string email = "parent@example.com")
     {
         var client = CreateClient();
-        (await client.PostAsJsonAsync("/api/auth/register", new RegisterRequest(email, "correct-horse-battery"), Json)).EnsureSuccessStatusCode();
+        (await client.PostAsJsonAsync("/api/auth/register", new RegisterRequest(email, DefaultPassword), Json)).EnsureSuccessStatusCode();
         using (var scope = Services.CreateScope())
         {
             var users = scope.ServiceProvider.GetRequiredService<UserManager<ParentUser>>();
@@ -74,8 +76,42 @@ public class ServerFactory : WebApplicationFactory<Program>
             user.EmailConfirmed = true;
             await users.UpdateAsync(user);
         }
-        (await client.PostAsJsonAsync("/api/auth/login", new LoginRequest(email, "correct-horse-battery"), Json)).EnsureSuccessStatusCode();
+        await SignInAsync(client, email);
         return client;
+    }
+
+    /// <summary>Signs in on <paramref name="client"/>: the password, then the code sent by email.</summary>
+    public async Task SignInAsync(HttpClient client, string email, string password = DefaultPassword)
+    {
+        var login = await client.PostAsJsonAsync("/api/auth/login", new LoginRequest(email, password), Json);
+        login.EnsureSuccessStatusCode();
+        Assert.Equal(TwoFactorMethodEnum.Email, (await login.Content.ReadFromJsonAsync<LoginResponse>(Json))!.SecondStep);
+        (await client.PostAsJsonAsync("/api/auth/login/code",
+            new LoginCodeRequest(TwoFactorMethodEnum.Email, await NewEmailCodeAsync(email), false), Json)).EnsureSuccessStatusCode();
+    }
+
+    /// <summary>
+    /// A new sign-in code for <paramref name="email"/>, made directly rather than read from an email (faster). It
+    /// replaces the one emailed at sign-in.
+    /// </summary>
+    public async Task<string> NewEmailCodeAsync(string email)
+    {
+        using var scope = Services.CreateScope();
+        var users = scope.ServiceProvider.GetRequiredService<UserManager<ParentUser>>();
+        return await users.GenerateTwoFactorTokenAsync((await users.FindByEmailAsync(email))!, TokenOptions.DefaultEmailProvider);
+    }
+
+    /// <summary>Waits for the <paramref name="number"/>th sign-in code emailed to <paramref name="to"/> and returns the code.</summary>
+    public async Task<string> WaitForLoginCodeAsync(string to, int number = 1)
+    {
+        for (var waited = 0; ; waited += 50)
+        {
+            var codes = AllEmails().Where(m => m.To.Mailboxes.Any(a => a.Address == to) && IsLoginCode(m)).ToList();
+            if (codes.Count >= number)
+                return Regex.Match(codes[number - 1].TextBody!, @"\b\d{6}\b").Value;
+            Assert.True(waited < 10_000, "No sign-in code was emailed.");
+            await Task.Delay(50);
+        }
     }
 
     /// <summary>
@@ -93,8 +129,15 @@ public class ServerFactory : WebApplicationFactory<Program>
         }
     }
 
-    /// <summary>Every email the server has sent so far, oldest first.</summary>
-    public List<MimeMessage> Emails() =>
+    /// <summary>
+    /// Every email the server has sent so far, oldest first, except sign-in codes: every sign-in sends one, so
+    /// they're read with <see cref="WaitForLoginCodeAsync"/> instead.
+    /// </summary>
+    public List<MimeMessage> Emails() => AllEmails().Where(m => !IsLoginCode(m)).ToList();
+
+    private static bool IsLoginCode(MimeMessage email) => email.Subject?.StartsWith("Your Screen Time sign-in code") == true;
+
+    private List<MimeMessage> AllEmails() =>
         Directory.Exists(_emailDirectory)
             ? new DirectoryInfo(_emailDirectory).GetFiles("*.eml").OrderBy(f => f.LastWriteTimeUtc).Select(f => LoadEmail(f.FullName)).ToList()
             : [];

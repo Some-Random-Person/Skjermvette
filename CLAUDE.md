@@ -70,6 +70,7 @@ A parental screen-time manager: **one shared daily budget across all of a child'
   - `Microsoft.Extensions.Hosting.WindowsServices`
   - `Microsoft.AspNetCore.OpenApi` and `Swashbuckle.AspNetCore.SwaggerUI`
   - `MailKit` (server email, #27), with `System.Security.Cryptography.Pkcs` pinned to a patched version
+  - `QRCoder` (server, the authenticator app QR code, #33)
   - Anything else: ask first.
 
 ## Unconfirmed defaults

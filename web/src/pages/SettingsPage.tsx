@@ -1,11 +1,13 @@
 import { useState, type FormEvent } from "react";
 import { api } from "../api/client";
+import type { AuthenticatorSetup } from "../api/types";
 import { useAuth } from "../auth/useAuth";
 import { ErrorText } from "../components/ErrorText";
 import { ThemeSwitcher } from "../components/ThemeSwitcher";
 import { useConfirm } from "../confirm/useConfirm";
 import { t, type StringKey } from "../i18n/t";
 import { useAction } from "../useAction";
+import { useLoad } from "../useLoad";
 
 export function SettingsPage() {
   return (
@@ -14,6 +16,7 @@ export function SettingsPage() {
       <NameSection />
       <EmailSection />
       <PasswordSection />
+      <SecuritySection />
       <section className="card stack">
         <h2>{t("settings.appearanceTitle")}</h2>
         <p className="muted">{t("settings.appearanceHelp")}</p>
@@ -181,6 +184,239 @@ function PasswordSection() {
       {done && <p className="ok">{t("settings.passwordChanged")}</p>}
       <ErrorText error={error} />
     </form>
+  );
+}
+
+function SecuritySection() {
+  const { data, error, reload } = useLoad(api.twoFactor, "two-factor");
+  /** Recovery codes to show once, after setting up the app or making new ones. */
+  const [codes, setCodes] = useState<string[]>();
+
+  const showCodes = async (recoveryCodes: string[]) => {
+    setCodes(recoveryCodes);
+    await reload();
+  };
+
+  return (
+    <section className="card stack">
+      <h2>{t("security.title")}</h2>
+      <p className="muted">{t("security.help")}</p>
+      <ErrorText error={error} />
+      {data && (
+        <p>
+          {data.appEnabled
+            ? t("security.statusApp", { count: data.recoveryCodesLeft })
+            : t("security.statusEmail")}
+        </p>
+      )}
+      {codes && <RecoveryCodesList codes={codes} onDone={() => setCodes(undefined)} />}
+      {data && !data.appEnabled && <SetupApp onEnabled={showCodes} />}
+      {data?.appEnabled && !codes && (
+        <>
+          <NewRecoveryCodes onCreated={showCodes} />
+          <RemoveApp onRemoved={reload} />
+        </>
+      )}
+      <ForgetBrowsers />
+    </section>
+  );
+}
+
+function SetupApp({ onEnabled }: { onEnabled: (codes: string[]) => Promise<void> }) {
+  const [setup, setSetup] = useState<AuthenticatorSetup>();
+  const [code, setCode] = useState("");
+  const { run, busy, error } = useAction();
+
+  if (!setup) {
+    return (
+      <div className="stack">
+        <div>
+          <button disabled={busy} onClick={() => run(async () => setSetup(await api.setupApp()))}>
+            {t("security.setup")}
+          </button>
+        </div>
+        <ErrorText error={error} />
+      </div>
+    );
+  }
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    await run(async () => onEnabled((await api.enableApp(code)).codes));
+  };
+
+  return (
+    <form className="stack" onSubmit={submit}>
+      <h3>{t("security.setupTitle")}</h3>
+      <p>{t("security.setupScan")}</p>
+      <img
+        className="qr"
+        src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(setup.qrCodeSvg)}`}
+        alt={t("security.qrAlt")}
+      />
+      <p>
+        {t("security.setupKey")} <span className="mono">{setup.key}</span>
+      </p>
+      <p>
+        <a href={setup.uri}>{t("security.setupLink")}</a>
+      </p>
+      <label>
+        {t("security.setupCode")}
+        <input
+          required
+          autoComplete="one-time-code"
+          inputMode="numeric"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+        />
+      </label>
+      <div className="inline">
+        <button className="primary" disabled={busy}>
+          {t("security.setupSubmit")}
+        </button>
+        <button type="button" className="link" onClick={() => setSetup(undefined)}>
+          {t("common.cancel")}
+        </button>
+      </div>
+      <ErrorText error={error} />
+    </form>
+  );
+}
+
+function RecoveryCodesList({ codes, onDone }: { codes: string[]; onDone: () => void }) {
+  const [copied, setCopied] = useState(false);
+
+  return (
+    <div className="stack">
+      <h3>{t("security.codesTitle")}</h3>
+      <p>{t("security.codesHelp")}</p>
+      <ul className="codes mono">
+        {codes.map((code) => (
+          <li key={code}>{code}</li>
+        ))}
+      </ul>
+      <div className="inline">
+        <button
+          type="button"
+          onClick={async () => {
+            await navigator.clipboard.writeText(codes.join("\n"));
+            setCopied(true);
+          }}
+        >
+          {t("security.codesCopy")}
+        </button>
+        <button type="button" className="primary" onClick={onDone}>
+          {t("security.codesDone")}
+        </button>
+        {copied && <span className="ok">{t("security.codesCopied")}</span>}
+      </div>
+    </div>
+  );
+}
+
+function NewRecoveryCodes({ onCreated }: { onCreated: (codes: string[]) => Promise<void> }) {
+  const confirm = useConfirm();
+  const { run, busy, error } = useAction();
+
+  const create = () =>
+    run(async () => {
+      const confirmed = await confirm({
+        title: t("security.newCodesConfirmTitle"),
+        message: t("security.newCodesConfirm"),
+        confirmLabel: t("security.newCodes"),
+      });
+      if (confirmed) await onCreated((await api.newRecoveryCodes()).codes);
+    });
+
+  return (
+    <div className="stack">
+      <div>
+        <button type="button" disabled={busy} onClick={create}>
+          {t("security.newCodes")}
+        </button>
+      </div>
+      <ErrorText error={error} />
+    </div>
+  );
+}
+
+function RemoveApp({ onRemoved }: { onRemoved: () => Promise<void> }) {
+  const [password, setPassword] = useState("");
+  const [code, setCode] = useState("");
+  const { run, busy, error } = useAction();
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    await run(async () => {
+      await api.disableApp(password, code);
+      await onRemoved();
+    });
+  };
+
+  return (
+    <form className="stack" onSubmit={submit}>
+      <h3>{t("security.removeTitle")}</h3>
+      <p className="muted">{t("security.removeHelp")}</p>
+      <div className="two-col">
+        <label>
+          {t("settings.currentPassword")}
+          <input
+            type="password"
+            required
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </label>
+        <label>
+          {t("security.removeCode")}
+          <input
+            required
+            autoComplete="one-time-code"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+          />
+        </label>
+      </div>
+      <div>
+        <button className="danger" disabled={busy}>
+          {t("security.removeSubmit")}
+        </button>
+      </div>
+      <ErrorText error={error} />
+    </form>
+  );
+}
+
+function ForgetBrowsers() {
+  const confirm = useConfirm();
+  const { run, busy, error } = useAction();
+  const [forgotten, setForgotten] = useState(false);
+
+  const forget = () =>
+    run(async () => {
+      const confirmed = await confirm({
+        title: t("security.forgetConfirmTitle"),
+        message: t("security.forgetConfirm"),
+        confirmLabel: t("security.forget"),
+      });
+      if (!confirmed) return;
+      await api.forgetBrowsers();
+      setForgotten(true);
+    });
+
+  return (
+    <div className="stack">
+      <h3>{t("security.forgetTitle")}</h3>
+      <p className="muted">{t("security.forgetHelp")}</p>
+      <div className="inline">
+        <button type="button" disabled={busy} onClick={forget}>
+          {t("security.forget")}
+        </button>
+        {forgotten && <span className="ok">{t("security.forgotten")}</span>}
+      </div>
+      <ErrorText error={error} />
+    </div>
   );
 }
 
