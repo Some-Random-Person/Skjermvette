@@ -69,7 +69,7 @@
   "login.toLogin": "Already have an account? Sign in",
   "login.forgot": "Forgot your password?",
   "login.checkEmailTitle": "Check your email",
-  "login.checkEmail": "We sent a link to {email}. Open it to confirm your address, then sign in. The link works for 24 hours.",
+  "login.checkEmail": "We sent an email to {email}. Open the link in it to confirm your address, then sign in. The link works for 24 hours. If the address already has an account, the email says how to sign in instead.",
   "login.backToLogin": "Back to sign in",
   "login.resend": "Send the link again",
   "login.resent": "Sent. Check your inbox, and your spam folder too.",

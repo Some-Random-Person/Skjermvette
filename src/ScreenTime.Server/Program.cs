@@ -98,8 +98,8 @@ builder.Services.AddRateLimiter(options =>
     options.AddPolicy(DeviceEndpoints.PairingRateLimit, ctx => RateLimitPartition.GetFixedWindowLimiter(
         ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1) }));
-    // Forgot password and resending the confirmation link email any address typed in, so limit how many
-    // emails one sender can trigger.
+    // Registering, forgot password and resending the confirmation link email any address typed in, so limit
+    // how many emails one sender can trigger.
     options.AddPolicy(AuthEndpoints.EmailRateLimit, ctx => RateLimitPartition.GetFixedWindowLimiter(
         ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(15) }));

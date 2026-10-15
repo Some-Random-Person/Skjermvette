@@ -17,7 +17,7 @@ public static class AuthEndpoints
     public static void MapAuthEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/auth").WithTags("Auth");
-        group.MapPost("/register", RegisterAsync);
+        group.MapPost("/register", RegisterAsync).RequireRateLimiting(EmailRateLimit);
         group.MapPost("/login", LoginAsync);
         group.MapPost("/logout", LogoutAsync).RequireAuthorization(AppClaims.ParentPolicy);
         group.MapGet("/me", MeAsync).RequireAuthorization(AppClaims.ParentPolicy);
@@ -30,7 +30,9 @@ public static class AuthEndpoints
 
     /// <summary>
     /// Creates a parent account with a new family and emails a link to confirm the address.
-    /// The parent can sign in once the address is confirmed.
+    /// The parent can sign in once the address is confirmed. If the address already has an account,
+    /// the reply is the same and that address is emailed instead, so it doesn't reveal which addresses
+    /// have accounts. Rate limited.
     /// </summary>
     private static async Task<Results<NoContent, ValidationProblem>> RegisterAsync(
         RegisterRequest request, UserManager<ParentUser> users, AccountEmails emails, AppDbContext db)
@@ -39,11 +41,19 @@ public static class AuthEndpoints
         db.Families.Add(family);
         var user = new ParentUser { UserName = request.Email, Email = request.Email, Family = family };
 
+        // Identity checks and hashes the password before it checks the address, so a taken address
+        // gets the same password errors, and takes about as long, as a new one.
         var result = await users.CreateAsync(user, request.Password);
         if (!result.Succeeded)
         {
             db.Families.Remove(family);
-            return TypedResults.ValidationProblem(ParentSession.Errors(result));
+            if (!result.Errors.All(e => e.Code is nameof(IdentityErrorDescriber.DuplicateEmail)
+                    or nameof(IdentityErrorDescriber.DuplicateUserName)))
+                return TypedResults.ValidationProblem(ParentSession.Errors(result));
+
+            if (await users.FindByEmailAsync(request.Email) is { } existing)
+                emails.SendRegisterAttempt(existing);
+            return TypedResults.NoContent();
         }
 
         await emails.SendConfirmationAsync(user);
