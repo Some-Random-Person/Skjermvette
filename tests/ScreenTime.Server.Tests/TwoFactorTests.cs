@@ -24,15 +24,6 @@ public class TwoFactorTests
 
     private static async Task<HttpStatusCode> ChildrenStatusAsync(HttpClient client) => (await client.GetAsync("/api/children")).StatusCode;
 
-    /// <summary>Sets up the authenticator app for the signed-in <paramref name="parent"/>; returns its key and the recovery codes.</summary>
-    private static async Task<(string Key, IReadOnlyList<string> RecoveryCodes)> EnableAppAsync(HttpClient parent)
-    {
-        var setup = await (await parent.PostAsync("/api/account/two-factor/app/setup", null)).Content.ReadFromJsonAsync<AuthenticatorSetupResponse>(Json);
-        var response = await parent.PostAsJsonAsync("/api/account/two-factor/app", new EnableAuthenticatorRequest(Totp.Code(setup!.Key)), Json);
-        response.EnsureSuccessStatusCode();
-        return (setup.Key, (await response.Content.ReadFromJsonAsync<RecoveryCodesResponse>(Json))!.Codes);
-    }
-
     [Fact]
     public async Task WithoutApp_TheEmailedCode_SignsIn()
     {
@@ -309,5 +300,33 @@ public class TwoFactorTests
         });
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task EveryChange_IsEmailed_WithALinkToResetThePasswordIfItWasntThem()
+    {
+        using var factory = new ServerFactory();
+        var parent = await factory.CreateParentAsync(Email);
+
+        var (key, _) = await EnableAppAsync(parent);
+        (await parent.PostAsync("/api/account/two-factor/recovery-codes", null)).EnsureSuccessStatusCode();
+        (await parent.PostAsync("/api/account/two-factor/forget-browsers", null)).EnsureSuccessStatusCode();
+        (await parent.SendAsync(new HttpRequestMessage(HttpMethod.Delete, "/api/account/two-factor/app")
+        {
+            Content = JsonContent.Create(new DisableAuthenticatorRequest(DefaultPassword, Totp.Code(key)), options: Json),
+        })).EnsureSuccessStatusCode();
+        // The first email is the address confirmation from registering.
+        var notices = (await factory.WaitForEmailsAsync(Email, 5)).Skip(1).ToList();
+        var link = LinkIn(notices[^1]).Query;
+        var reset = await factory.CreateClient().PostAsJsonAsync("/api/auth/reset-password",
+            new ResetPasswordRequest(Guid.Parse(link["userId"]), link["token"], "taking-it-back-now"), Json);
+
+        Assert.All(notices, n => Assert.Equal("Your Screen Time sign-in security changed", n.Subject));
+        Assert.Collection(notices,
+            n => Assert.Contains("authenticator app was just turned on", n.TextBody),
+            n => Assert.Contains("New recovery codes were just made", n.TextBody),
+            n => Assert.Contains("remembered browsers were just forgotten", n.TextBody),
+            n => Assert.Contains("authenticator app was just turned off", n.TextBody));
+        Assert.Equal(HttpStatusCode.NoContent, reset.StatusCode);
     }
 }

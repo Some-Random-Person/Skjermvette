@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,10 +17,10 @@ public class AccountDeletionTests
 {
     private const string Password = "correct-horse-battery";
 
-    private static Task<HttpResponseMessage> DeleteAccountAsync(HttpClient parent, string password) =>
+    private static Task<HttpResponseMessage> DeleteAccountAsync(HttpClient parent, string password, string code) =>
         parent.SendAsync(new HttpRequestMessage(HttpMethod.Delete, "/api/account")
         {
-            Content = JsonContent.Create(new DeleteAccountRequest(password), options: Json),
+            Content = JsonContent.Create(new DeleteAccountRequest(password, code), options: Json),
         });
 
     /// <summary>Row counts of every table a family's data lives in, across all families.</summary>
@@ -61,13 +62,65 @@ public class AccountDeletionTests
         var (parent, device) = await CreateFamilyAsync(factory, "ada@example.com");
         var before = await CountRowsAsync(factory);
 
-        var response = await DeleteAccountAsync(parent, "wrong-password!");
+        var response = await DeleteAccountAsync(parent, "wrong-password!", await factory.NewEmailCodeAsync("ada@example.com"));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Contains("CurrentPassword", await response.Content.ReadAsStringAsync());
         Assert.Equal(before, await CountRowsAsync(factory));
         Assert.Equal(HttpStatusCode.OK, (await parent.GetAsync("/api/children")).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await device.GetAsync("/api/device/state")).StatusCode);
+    }
+
+    [Fact]
+    public async Task WrongCode_IsRejected_NothingIsDeleted_AndItCountsTowardTheLockout()
+    {
+        using var factory = new ServerFactory();
+        var (parent, _) = await CreateFamilyAsync(factory, "ada@example.com");
+        var before = await CountRowsAsync(factory);
+
+        var responses = new List<HttpResponseMessage>();
+        for (var i = 0; i < 5; i++)
+            responses.Add(await DeleteAccountAsync(parent, Password, "000000"));
+        var rightCode = await DeleteAccountAsync(parent, Password, await factory.NewEmailCodeAsync("ada@example.com"));
+
+        Assert.All(responses, r => Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode));
+        Assert.Contains("Code", await responses[0].Content.ReadAsStringAsync());
+        Assert.Contains("Too many wrong attempts", await responses[4].Content.ReadAsStringAsync());
+        Assert.Equal(HttpStatusCode.BadRequest, rightCode.StatusCode);
+        Assert.Equal(before, await CountRowsAsync(factory));
+    }
+
+    [Fact]
+    public async Task EmailedCode_AskedForFromSettings_DeletesTheAccount()
+    {
+        using var factory = new ServerFactory();
+        var parent = await factory.CreateParentAsync("ada@example.com");
+
+        var sent = await parent.PostAsync("/api/account/deletion/email-code", null);
+        var email = (await factory.WaitForEmailsAsync("ada@example.com", 2))[1];
+        var code = Regex.Match(email.TextBody!, @"\b\d{6}\b").Value;
+        var response = await DeleteAccountAsync(parent, Password, code);
+
+        Assert.Equal(HttpStatusCode.NoContent, sent.StatusCode);
+        Assert.StartsWith("Your code to delete your Screen Time account", email.Subject);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await parent.GetAsync("/api/children")).StatusCode);
+    }
+
+    [Fact]
+    public async Task WithTheApp_AnAppOrRecoveryCodeWorks()
+    {
+        using var factory = new ServerFactory();
+        var ada = await factory.CreateParentAsync("ada@example.com");
+        var bob = await factory.CreateParentAsync("bob@example.com");
+        var (adaKey, _) = await EnableAppAsync(ada);
+        var (_, bobCodes) = await EnableAppAsync(bob);
+
+        var withAppCode = await DeleteAccountAsync(ada, Password, Totp.Code(adaKey));
+        var withRecoveryCode = await DeleteAccountAsync(bob, Password, bobCodes[0]);
+
+        Assert.Equal(HttpStatusCode.NoContent, withAppCode.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, withRecoveryCode.StatusCode);
     }
 
     [Fact]
@@ -95,7 +148,7 @@ public class AccountDeletionTests
         var withBothFamilies = await CountRowsAsync(factory);
 
         var info = await parent.GetFromJsonAsync<AccountDeletionResponse>("/api/account/deletion", Json);
-        var response = await DeleteAccountAsync(parent, Password);
+        var response = await DeleteAccountAsync(parent, Password, await factory.NewEmailCodeAsync("ada@example.com"));
 
         // Every table held some of this family's rows, so each cascade path below was exercised.
         Assert.All(withBothFamilies, table => Assert.True(table.Value > onlyOtherFamily[table.Key], $"No {table.Key} rows were created."));
@@ -122,7 +175,7 @@ public class AccountDeletionTests
         }
 
         var info = await parent.GetFromJsonAsync<AccountDeletionResponse>("/api/account/deletion", Json);
-        var response = await DeleteAccountAsync(parent, Password);
+        var response = await DeleteAccountAsync(parent, Password, await factory.NewEmailCodeAsync("ada@example.com"));
         var adaLogin = await factory.CreateClient().PostAsJsonAsync("/api/auth/login", new LoginRequest("ada@example.com", Password), Json);
         var bob = factory.CreateClient();
         await factory.SignInAsync(bob, "bob@example.com", Password);
@@ -142,7 +195,7 @@ public class AccountDeletionTests
         var otherBrowser = factory.CreateClient();
         await factory.SignInAsync(otherBrowser, "ada@example.com", Password);
 
-        (await DeleteAccountAsync(parent, Password)).EnsureSuccessStatusCode();
+        (await DeleteAccountAsync(parent, Password, await factory.NewEmailCodeAsync("ada@example.com"))).EnsureSuccessStatusCode();
         factory.Clock.Advance(ParentSession.RecheckInterval + TimeSpan.FromSeconds(1));
 
         Assert.Equal(HttpStatusCode.Unauthorized, (await otherBrowser.GetAsync("/api/children")).StatusCode);
