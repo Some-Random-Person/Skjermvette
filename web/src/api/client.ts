@@ -59,7 +59,14 @@ export const api = {
   login: (email: string, password: string) =>
     request<Me>("POST", "/api/auth/login", { email, password }),
   register: (email: string, password: string) =>
-    request<Me>("POST", "/api/auth/register", { email, password }),
+    request<void>("POST", "/api/auth/register", { email, password }),
+  confirmEmail: (userId: string, token: string) =>
+    request<void>("POST", "/api/auth/confirm-email", { userId, token }),
+  resendConfirmation: (email: string) =>
+    request<void>("POST", "/api/auth/resend-confirmation", { email }),
+  forgotPassword: (email: string) => request<void>("POST", "/api/auth/forgot-password", { email }),
+  resetPassword: (userId: string, token: string, newPassword: string) =>
+    request<void>("POST", "/api/auth/reset-password", { userId, token, newPassword }),
   logout: () => request<void>("POST", "/api/auth/logout"),
   updateName: (name: string) => request<Me>("PUT", "/api/account/name", { name }),
   changeEmail: (newEmail: string, currentPassword: string) =>

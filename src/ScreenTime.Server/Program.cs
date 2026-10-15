@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using ScreenTime.Server.Auth;
 using ScreenTime.Server.Data;
 using ScreenTime.Server.Data.Entities;
+using ScreenTime.Server.Email;
 using ScreenTime.Server.Endpoints;
 using ScreenTime.Server.Services;
 
@@ -63,10 +64,13 @@ builder.Services.AddIdentityCore<ParentUser>(options =>
         options.Password.RequireUppercase = false;
         options.Password.RequireLowercase = false;
         options.Lockout.MaxFailedAccessAttempts = 5;
+        options.Tokens.PasswordResetTokenProvider = PasswordResetTokenProvider.ProviderName;
     })
     .AddEntityFrameworkStores<AppDbContext>()
     .AddSignInManager()
-    .AddClaimsPrincipalFactory<ParentClaimsFactory>();
+    .AddClaimsPrincipalFactory<ParentClaimsFactory>()
+    .AddDefaultTokenProviders()
+    .AddTokenProvider<PasswordResetTokenProvider>(PasswordResetTokenProvider.ProviderName);
 
 // PBKDF2-HMAC-SHA512 iterations for parent passwords. Identity's default is 100,000; OWASP recommends at
 // least 210,000. About 0.2 s per sign-in. Older hashes are upgraded automatically at the next sign-in.
@@ -83,6 +87,9 @@ builder.Services.AddOptions<SecurityStampValidatorOptions>()
     });
 builder.Services.AddOptions<CookieAuthenticationOptions>(IdentityConstants.ApplicationScheme)
     .Configure<TimeProvider>((options, time) => options.TimeProvider = time);
+// Email confirmation links. Password reset links have their own, shorter life (PasswordResetTokenProvider).
+// Identity checks link expiry against the system clock, not the TimeProvider.
+builder.Services.Configure<DataProtectionTokenProviderOptions>(options => options.TokenLifespan = ParentSession.ConfirmationLinkLifespan);
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -91,6 +98,11 @@ builder.Services.AddRateLimiter(options =>
     options.AddPolicy(DeviceEndpoints.PairingRateLimit, ctx => RateLimitPartition.GetFixedWindowLimiter(
         ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1) }));
+    // Forgot password and resending the confirmation link email any address typed in, so limit how many
+    // emails one sender can trigger.
+    options.AddPolicy(AuthEndpoints.EmailRateLimit, ctx => RateLimitPartition.GetFixedWindowLimiter(
+        ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(15) }));
 });
 
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
@@ -101,6 +113,10 @@ builder.Services.AddOpenApi(OpenApiSetup.Configure);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<ChildLocks>();
 builder.Services.AddScoped<BudgetService>();
+builder.Services.AddSingleton(EmailSettings.FromConfiguration(builder.Configuration, builder.Environment.ContentRootPath));
+builder.Services.AddSingleton<EmailOutbox>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<EmailOutbox>());
+builder.Services.AddScoped<AccountEmails>();
 
 var app = builder.Build();
 

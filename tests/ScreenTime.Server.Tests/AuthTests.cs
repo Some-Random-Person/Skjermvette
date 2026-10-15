@@ -8,7 +8,7 @@ namespace ScreenTime.Server.Tests;
 public class AuthTests
 {
     [Fact]
-    public async Task Register_SignsIn()
+    public async Task ConfirmedParent_IsSignedIn()
     {
         using var factory = new ServerFactory();
         var parent = await factory.CreateParentAsync("ada@example.com");

@@ -6,7 +6,6 @@ export interface Auth {
   /** undefined while checking the session, null when signed out. */
   me: Me | null | undefined;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   /** Updates the signed-in parent after an account change (name or email), or null once the account is deleted. */
   setMe: (me: Me | null) => void;
@@ -25,17 +24,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     setMe(await api.login(email, password));
   }, []);
-  const register = useCallback(async (email: string, password: string) => {
-    setMe(await api.register(email, password));
-  }, []);
   const logout = useCallback(async () => {
     await api.logout();
     setMe(null);
   }, []);
 
-  const value = useMemo(
-    () => ({ me, login, register, logout, setMe }),
-    [me, login, register, logout],
-  );
+  const value = useMemo(() => ({ me, login, logout, setMe }), [me, login, logout]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

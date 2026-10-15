@@ -69,6 +69,28 @@
   "login.register": "Create account",
   "login.toRegister": "No account yet? Create one",
   "login.toLogin": "Already have an account? Sign in",
+  "login.forgot": "Forgot your password?",
+  "login.checkEmailTitle": "Check your email",
+  "login.checkEmail": "We sent a link to {email}. Open it to confirm your address, then sign in. The link works for 24 hours.",
+  "login.backToLogin": "Back to sign in",
+  "login.resend": "Send the link again",
+  "login.resent": "Sent. Check your inbox, and your spam folder too.",
+
+  "link.invalid": "This link is incomplete. Open it straight from the email.",
+
+  "confirmEmail.title": "Confirm your email",
+  "confirmEmail.done": "Your email is confirmed. You can sign in now.",
+  "confirmEmail.newLink": "To get a new link, sign in with your email and password, then choose “Send the link again”.",
+
+  "forgot.title": "Forgot your password?",
+  "forgot.help": "Enter the email you sign in with, and we'll send you a link to choose a new password.",
+  "forgot.submit": "Send link",
+  "forgot.sent": "If {email} has an account, we've sent it a link to choose a new password. The link works for 1 hour. If it doesn't arrive, check your spam folder.",
+
+  "reset.title": "Choose a new password",
+  "reset.submit": "Save new password",
+  "reset.done": "Your password is changed, and any other browsers are signed out. Sign in with the new password.",
+  "reset.newLink": "Ask for a new link",
 
   "children.title": "Children",
   "children.empty": "No children yet. Add a child to set their daily screen time.",
