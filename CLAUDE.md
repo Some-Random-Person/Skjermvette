@@ -4,199 +4,72 @@ Project root: `C:\dev\Test`. Remote: `github.com/Some-Random-Person/ScreenTimeMa
 
 **Hard rule:** all code for this project goes in this folder. Anything outside it is read-only reference.
 
-## Product
+## Where things are written down
+- **This file:** rules for every task. Keep it short; area-specific detail goes in the files below.
+- [`docs/product.md`](docs/product.md): the full product rules. **Read it before changing how time is counted, limited or blocked.**
+- [`docs/plan.md`](docs/plan.md): Phase 1 status, what's left (Windows agent, browser extension, deploy files), the rules agents must follow, and later phases. Update its status table when a step is done.
+- `src/ScreenTime.Server/CLAUDE.md` (server, database, auth, device API) and `web/CLAUDE.md` (dashboard). These load automatically when working in those folders. When a new area starts (e.g. `extension/`, the agent projects), give it its own `CLAUDE.md`.
 
-- **What it is:** a parental screen-time manager that enforces **one shared daily budget across all of a child's devices**. Switching device doesn't get around the limits.
-- **Users:**
-  - Parents manage children, devices and rules from a web dashboard.
-  - Children's devices run an agent that tracks and enforces.
-- **Platforms:**
-  - Windows (Phase 1), then Android, iOS, macOS and Linux.
-  - Every platform uses the same server API.
-- **Rules per child:**
-  - **Daily total**, e.g. 2 h. Counts all non-exempt use across every device.
-  - **Per-app limit**, e.g. YouTube 30 min. Counts toward that app's limit *and* the daily total. The app is blocked when either runs out.
-  - **Exempt apps**, e.g. Teams. Never blocked and never counted toward the total, but still recorded for reporting.
-  - When the total runs out, everything is blocked except exempt apps and a system allowlist (Settings, the dashboard, phone/emergency on mobile).
-- **Counting:**
-  - **One minute counts as one minute.** Usage from every device counts, but time when several apps or devices are in use at once counts only once (the server merges overlapping time): 10 min on the phone and 10 min on the PC *at the same time* = 10 min. Changed by the user on 2026-10-14; it was previously added up.
-  - The same goes for each app's limit: YouTube on two devices at once counts 1 min of YouTube per minute.
-  - **Background audio counts toward the playing app's own limit** (e.g. YouTube playing in a hidden tab), but not twice toward the total. Agents report everything in use: the foreground app plus any app playing audio.
-  - **Websites count** toward the matching app. youtube.com in a browser = YouTube, and subdomains match.
-  - Idle time doesn't count: no input for 2 min **and** no audio playing.
-- **Logical apps:**
-  - Rules target platform-neutral logical apps.
-  - Each one maps to platform identifiers: process name, Android package, Apple bundle, iOS token, or web domain.
-  - Unknown identifiers are stored so the parent can assign them to an app.
-  - Mappings a family makes are private to that family. Nothing is shared between families or sent anywhere automatically.
-  - **Built-in catalog** (`SeedCatalog.cs`): grown by hand with each release, then a migration is added.
-    - App ids continue the sequence (`Id(n)`); never reuse or renumber them.
-    - Only add identifiers that are known to be right. iOS bundle ids are informational, since iOS reports opaque tokens.
-  - **A family's own mapping wins** over a built-in identifier with the same value (`ToCoreCatalog`), so catalog updates never change how a family's existing mappings count.
-  - **Suggestions:** parents can email a family identifier to the maintainer with "Suggest", a `mailto:` they review and send themselves.
-    - The address is `appSuggestionEmail` in `web/src/config.ts`. While it's `null`, the button is hidden.
-    - The user is setting up a dedicated address; don't use their personal one.
-    - Decided against automatic or telemetry-style collection (children's data, GDPR, opt-in and a central service).
-- **Day boundary:** the child's time zone plus a configurable reset hour.
-- **Offline allowance** (internally "lease"):
-  - Each device holds a chunk of the remaining time that is set aside for it. The server subtracts it from what the other devices may use, so going offline can never exceed the daily limit.
-  - An offline device counts its chunk down and then locks everything that isn't exempt. When it reconnects, it uploads its offline usage, and the unused time goes back into the pool.
-  - Reservations expire at the daily reset.
-  - Parents can configure it per child, with an optional per-device override: 0–60 min, **default 5**. 0 = lock as soon as the device goes offline.
-  - **It must be explained in plain language** wherever a parent sees it (dashboard + README), including a worked example and the trade-off.
-- **Tamper resistance (Windows):**
-  - The child uses a standard account. The agent runs as a SYSTEM service and watches the user-session helper.
-  - The browser extension is force-installed by policy, and InPrivate/Incognito is disabled.
-  - Browsers without the extension are closed. Uninstalling needs a parent PIN.
-- **Plan:** [`docs/plan.md`](docs/plan.md): Phase 1 scope, status of each step, what's left (Windows agent, browser extension, deploy files), the rules agents must follow, later phases and verification. Update its status table when a step is done or a decision changes it.
-- **Non-goals:** none stated yet.
+## Product in short
+A parental screen-time manager: **one shared daily budget across all of a child's devices**, with a daily total, per-app limits and exempt apps. Rules that are easy to break by accident:
+- **One minute counts as one minute:** use on several apps or devices at the same time counts once (the server merges overlapping time), for the total and for each app's limit.
+- **Background audio counts toward the playing app's own limit**, but not twice toward the total. **Websites count** toward the matching app.
+- **Offline allowance:** time set aside per device. Going offline can never exceed the daily limit. Default 5 min (0–60). It must always be explained to parents in plain language.
+- **A family's own app mapping wins** over the built-in catalog. Mappings are private to the family. **Nothing is shared or sent anywhere automatically** (no telemetry).
 
 ## How we work
-
-- The user gives instructions and Claude implements them.
-- If unsure what the user wants or how they want it, ask. Don't assume.
-- Follow KISS and DRY.
-  - Smallest change that works. No speculative generality.
-  - No single-implementation interfaces. The exception is when the platform requires one, e.g. COM interop.
-  - Match the existing style.
-- No new dependencies (NuGet, npm or other packages) beyond the approved list below without the user's clear go-ahead. Ask first.
+- The user gives instructions and Claude implements them. If unsure what the user wants or how, ask. Don't assume.
+- Follow KISS and DRY: the smallest change that works, no speculative generality, match the existing style. No single-implementation interfaces, except where the platform requires one (e.g. COM interop).
+- **No new dependencies** (NuGet, npm or other) beyond the approved lists here and in `web/CLAUDE.md` without the user's clear go-ahead. Ask first.
 - When designing, rank concerns by severity, say what an addition costs, and flag unknowns instead of guessing.
-- **Running tests:** keep the failure details in the output (`[FAIL]` lines, error messages, stack traces). Never filter down to the pass/fail summary only, and count a run as failed unless it clearly says "Passed". A flaky failure once went unexplained because only the summary was kept (#22, fixed in #34). Server errors from test runs are also written to `%TEMP%\screentime-test-server-errors.log` (`ServerErrorLog`).
+- **Running tests:** keep the failure details in the output (`[FAIL]` lines, error messages, stack traces). Never filter down to the summary only, and count a run as failed unless it clearly says "Passed" (#22, #34).
+- Build and test everything before a PR: `dotnet test ScreenTime.slnx`, plus `npm run check --prefix web` when the dashboard changed. Click through UI changes in the browser against the real server.
 
 ## Git
-
-- **Branches:**
-  - Work on feature branches, never directly on `main`.
-  - Name them `feat/<short-name>`, `docs/<short-name>` or `fix/<issue-number>-<short-name>` (e.g. `fix/7-empty-search`). Ask before using any other prefix.
-  - When a branch comes from an issue, put the issue number after the prefix, e.g. `feat/12-search` or `docs/15-api-readme`.
-  - Local cleanup: before starting new work, update `main`, run `git fetch --prune`, and delete local branches fully merged into `main` with `git branch -d` (never `-D`). Leave remote branches alone.
-- **Commits:**
-  - Commit when a piece of work is done.
-  - Use Conventional Commits (`feat: …`, `fix: …`, `docs: …`, `refactor: …`, `chore: …`).
-  - End every commit message with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
-- **Pushing, PRs and merging:**
-  - When work is done, Claude pushes the feature branch and opens a PR against `main` with `gh pr create`.
-  - **Claude merges its own PR** once it has reviewed the PR and verified it (builds and tests pass), and merges through the PR.
-  - Never push to `main`. Never force-push.
-  - Fixes from review go in as new commits. Don't rewrite history on a pushed branch.
-  - The PR description says what changed and why, and flags anything uncertain. Whenever Claude adds commits or otherwise changes its own PR, it updates the description so it reflects what the PR actually contains. End it with `🤖 Generated with [Claude Code](https://claude.com/claude-code)`.
+- **Branches:** never work on `main`. Name them `feat/<short-name>`, `docs/<short-name>` or `fix/<issue-number>-<short-name>`, with the issue number after the prefix when there is one (e.g. `feat/12-search`). Ask before using any other prefix.
+- **Before new work:** update `main`, run `git fetch --prune`, and delete local branches fully merged into `main` with `git branch -d` (never `-D`). Leave remote branches alone.
+- **Commits:** commit when a piece of work is done. Use Conventional Commits (`feat:`, `fix:`, `docs:`, `refactor:`, `chore:`). End every message with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
+- **PRs:** push the feature branch and open a PR against `main` with `gh pr create`.
+  - **Claude merges its own PR** once it has reviewed it and verified that builds and tests pass, merging through the PR.
+  - Never push to `main`. Never force-push. Fixes from review go in as new commits; don't rewrite history on a pushed branch.
+  - The description says what changed and why, and flags anything uncertain. Keep it accurate whenever the PR changes. End it with `🤖 Generated with [Claude Code](https://claude.com/claude-code)`.
 
 ## Issues
-
-- Bugs and feature ideas are tracked as GitHub issues, read and managed with `gh`.
-- **Picking up work:**
-  - Work on an issue when the user points to it ("do #7").
-  - Also pick one yourself when the user says something like "take the next one".
-  - When picking, bugs come first, then features. Within each group, take the highest impact first: what affects the most people, and anything that stops a main feature from working.
-  - When several issues have the same impact, take the oldest first.
-- **Linking:** a PR that resolves an issue includes `Closes #<n>` in its description, so the merge closes the issue.
-- **New issues:** when Claude spots a bug or loose end outside the current task, it opens an issue for it so it gets tracked. Don't fix it in the current branch.
-- **Questions:** the user asks clarifying questions on issues. Claude does not comment on issues. Ask in chat instead.
-- **Labels:** if Claude thinks a different label fits an issue better, it asks the user to confirm before changing it.
+- Tracked as GitHub issues, read and managed with `gh`.
+- **Picking up work:** work on an issue when the user points to it ("do #7"), or pick one when asked ("take the next one"): bugs before features, highest impact first (what affects the most people, or stops a main feature from working), oldest first when equal.
+- A PR that resolves an issue says `Closes #<n>` in its description.
+- **New issues:** when Claude spots a bug or loose end outside the current task, it opens an issue for it rather than fixing it in the current branch.
+- Claude doesn't comment on issues; questions go in chat. Ask the user before changing a label.
 
 ## Scale and ops
+- **Self-hosted:** server and Postgres via `deploy/docker-compose.yml`, exposed through a **Cloudflare Tunnel** (`cloudflared` on the host, not Caddy). Details are in `src/ScreenTime.Server/CLAUDE.md`.
+- **Dev machine:** Windows 11, .NET SDK 10, Node. No Docker or Postgres, so dev and tests use SQLite.
+- **Target load:** undecided; the working assumption is families (a few hundred to a few thousand devices per instance). Ask before designing for more.
+- **Out of scope** unless stated otherwise: multi-tenancy beyond families, i18n beyond keeping UI strings in `web/src/i18n/en.json`, and plugin architecture.
 
-- **Hosting:** self-hosted. The server and Postgres run through `deploy/docker-compose.yml`. The server is exposed through a **Cloudflare Tunnel (`cloudflared`)**, not a reverse proxy like Caddy: TLS ends at Cloudflare, and `cloudflared` forwards plain HTTP to the server, with the client IP in `CF-Connecting-IP` / `X-Forwarded-For`. `cloudflared` runs **directly on the host**, not in the compose file. The server container publishes its port on `127.0.0.1` only, so only the host (and `cloudflared`) can reach it.
-- **Dev machine:**
-  - Windows 11 with .NET SDK 10 and Node.
-  - No Docker or Postgres locally, so dev and tests use SQLite. The compose files are written but can't be run here.
-- **Target load:** undecided. The working assumption is families, i.e. a few hundred to a few thousand devices per instance. Ask before designing for more.
-- **Out of scope:** multi-tenancy beyond families, i18n beyond keeping UI strings in `web/src/i18n/en.json`, and plugin architecture, unless stated otherwise.
-
-## Backend (.NET): confirmed
-
-- **Framework:** .NET 10 (`net10.0`) with a `.slnx` solution file (`ScreenTime.slnx`).
-- **Code style:**
-  - Nullable and ImplicitUsings on. `GenerateDocumentationFile` on, with XML `<summary>` comments on public API endpoints.
-  - File-scoped namespaces and one type per file. Namespaces match project names (`ScreenTime.Core.Models`).
-  - Async methods end in `Async`. Private fields use `_camelCase`.
-  - DTOs are `sealed record`. Mapping is written by hand in static methods, with no AutoMapper.
-  - Comments are sparse.
-  - Entities:
-    - Mutable classes.
-    - `required` for mandatory values, `= null!` for navigation properties, `List<T> X { get; } = []` for collections.
-    - Enums are suffixed `Enum`, start at 1, carry `[Description]`, and live in the entity's file.
-  - Relationships are configured with the fluent API in `OnModelCreating`.
-- **Keys:** Guid primary keys for server entities, since devices generate event IDs offline.
-- **Server:** ASP.NET Core minimal API, plus a SignalR `BudgetHub` that pushes `BudgetSnapshot`s to every device of a child.
-- **Database:**
-  - EF Core code-first with migrations.
-  - SQLite in development and tests, Postgres in production.
-  - Migrations are generated for Postgres only (`PostgresDesignTimeFactory`) and applied at startup. The SQLite development and test database is created from the model with `EnsureCreated`, so delete `screentime.dev.db` after model changes.
-  - Add a migration: `dotnet ef migrations add <Name> --project src/ScreenTime.Server --output-dir Data/Migrations`. `dotnet-ef` is a local tool (`dotnet tool restore`).
-  - All `DateTime`s are UTC (`...Utc` names). SQLite can't compare `DateTimeOffset` in queries, so entities use `DateTime`.
-- **DI:**
-  - Built-in DI. The DbContext is registered with `AddDbContext`, which makes it scoped.
-  - Anything that uses the DbContext is `AddScoped`, never a singleton. Background jobs create their own scope.
-- **Config:**
-  - Production: environment variables only (`ConnectionStrings__DefaultConnection`, `Database__Provider` = `Sqlite` | `Postgres`). Fail fast at startup if either is missing.
-  - A gitignored `.env` holds production values, and `.env.example` is committed.
-  - Development: `appsettings.Development.json` points at a local SQLite file, so `dotnet run` works without a `.env`.
-- **API docs** (development only):
-  - Built-in `Microsoft.AspNetCore.OpenApi` generates `/openapi/v1.json`, and `Swashbuckle.AspNetCore.SwaggerUI` shows it at **`/docs`**.
-  - `Endpoints/OpenApiSetup.cs` adds the title, the device-token scheme (the Authorize button, on `/api/device/*` except pairing), and each endpoint handler's XML `<summary>`. It reads those from the build's XML documentation file, because ASP.NET Core's XML-comment generator didn't attach to this project. Keep a `<summary>` on every endpoint handler.
-- **Error handling:** built-in ProblemDetails (`AddProblemDetails()`, `TypedResults.Problem` / `ValidationProblem`). No result-wrapper type. Malformed requests are 400, not 500.
-- **JSON:** enums are serialized as strings, both over HTTP and over SignalR.
-- **Auth:**
-  - Parents: ASP.NET Core Identity with cookie auth. Optional `DisplayName` (max 100).
-  - Parent sign-ins are **re-checked against the database every minute** (Identity security stamp, `ParentSession.RecheckInterval`). A password or email change, or a deleted account, signs other browsers out within a minute. Anything that should cut off a parent's access (e.g. removing them from a family, #29) must call `UpdateSecurityStampAsync`.
-  - Passwords: Identity's PBKDF2-HMAC-SHA512 hash with a random 128-bit salt, at **250,000 iterations** (`ParentSession.PasswordHashIterations`; Identity's default is 100,000 and OWASP recommends at least 210,000). About 0.2 s per sign-in. Older hashes are upgraded at the next sign-in, which also changes the security stamp, so that parent's other browsers are signed out once.
-  - The `family_id` claim is added by `ParentClaimsFactory`, so it survives the re-check. Don't add claims by hand at sign-in.
-  - Account settings (`/api/account/name|email|password`): changing email or password needs the current password. Email changes have **no confirmation email** (the server doesn't send email), so the dashboard asks for the address twice. `/api/auth/me` reads the user from the database.
-  - Devices: pair with a 6-digit code that is exchanged for a long-lived device token. Only the token's hash is stored.
-- **Device API:**
-  - `POST /api/device/usage`: batched events, idempotent by client event GUID.
-  - `POST /api/device/lease`
-  - `GET /api/device/state`
-  - The request and response types live in **`ScreenTime.Core.DeviceApi`** (with `DevicePlatformEnum`), so the server, `FakeDevice` and the agents share one definition.
-  - Agents send usage every ~15 s with `POST /api/device/usage`; each call also renews the offline allowance.
+## .NET (all projects)
+- .NET 10 (`net10.0`), solution `ScreenTime.slnx`.
 - **Projects:**
-  - `src/ScreenTime.Core`: platform-neutral domain (`BudgetCalculator`, `AppResolver`, `TimeWindow`, models). Shared by the server and agents, with no I/O.
+  - `src/ScreenTime.Core`: platform-neutral domain (`BudgetCalculator`, `AppResolver`, `TimeWindow`, models, `DeviceApi` types), with no I/O.
   - `src/ScreenTime.Server`
-  - `src/ScreenTime.Agent.Service`: Windows Service (LocalSystem): sync, SQLite outbox, enforcement, browser policies.
-  - `src/ScreenTime.Agent.Helper`: WinForms app in the user session: foreground tracking, idle/audio detection, overlay, tray, native messaging host.
-  - `tests/ScreenTime.Core.Tests`, `tests/ScreenTime.Server.Tests` (xUnit).
-  - `tools/FakeDevice`: a console app that pairs like a real device and reports made-up usage (`pair`, `use`, `live`, `state`, `watch`, `list`, `forget`). Saved tokens live in `%LOCALAPPDATA%\ScreenTime\FakeDevice`, one file per device name. Names are unique on the computer (across children, ignoring case), and `pair` refuses an existing name. Use it to test across devices without real agents.
-- **Packages (approved with the Phase 1 plan):**
-  - xUnit (from the template) and `Microsoft.AspNetCore.Mvc.Testing`
-  - EF Core: `Microsoft.EntityFrameworkCore.Sqlite`, `Npgsql.EntityFrameworkCore.PostgreSQL`, `Microsoft.EntityFrameworkCore.Design` + `dotnet-ef`
+  - `tests/ScreenTime.Core.Tests`, `tests/ScreenTime.Server.Tests` (xUnit)
+  - `tools/FakeDevice`: a fake device for testing across devices
+  - To come: `src/ScreenTime.Agent.Service` and `src/ScreenTime.Agent.Helper` (see `docs/plan.md`)
+- **Code style:**
+  - Nullable and ImplicitUsings on. File-scoped namespaces, one type per file, namespaces matching project names.
+  - Async methods end in `Async`. Private fields use `_camelCase`. Comments are sparse.
+  - DTOs are `sealed record`, mapped by hand in static methods (no AutoMapper).
+  - Entities are mutable classes: `required` for mandatory values, `= null!` for navigation properties, `List<T> X { get; } = []` for collections.
+  - Enums are suffixed `Enum`, start at 1, carry `[Description]`, and live in the entity's file (shared device API enums live in `ScreenTime.Core.DeviceApi`).
+  - XML `<summary>` on every API endpoint handler (`GenerateDocumentationFile` is on; missing docs on other public types are not warned about).
+- **Approved NuGet packages:**
+  - xUnit (template) and `Microsoft.AspNetCore.Mvc.Testing`
+  - `Microsoft.EntityFrameworkCore.Sqlite`, `Npgsql.EntityFrameworkCore.PostgreSQL`, `Microsoft.EntityFrameworkCore.Design` + `dotnet-ef`
   - `Microsoft.AspNetCore.Identity.EntityFrameworkCore`
   - `Microsoft.AspNetCore.SignalR.Client` (agents, FakeDevice, server tests)
   - `Microsoft.Extensions.Hosting.WindowsServices`
-  - `Microsoft.AspNetCore.OpenApi` and `Swashbuckle.AspNetCore.SwaggerUI` (both approved separately)
+  - `Microsoft.AspNetCore.OpenApi` and `Swashbuckle.AspNetCore.SwaggerUI`
   - Anything else: ask first.
 
-## Clients: confirmed
-
-- **Browser extension** (`extension/`):
-  - Manifest V3, TypeScript, built with Vite. Chrome/Edge first.
-  - Reports the active domain, focus and audible state to the Helper via native messaging.
-  - Blocks with `declarativeNetRequest` dynamic redirect rules.
-  - **Fails closed** if native messaging is unavailable.
-- **Parent dashboard** (`web/`):
-  - React + Vite + TypeScript, with React Router for pages.
-  - The production build goes into `src/ScreenTime.Server/wwwroot` (gitignored). The server serves it with an `index.html` fallback for page URLs; unknown `/api/...` paths stay 404.
-  - In development, run Vite (`npm run dev`, port 5173). It forwards `/api` and `/hubs` to the server on port 5131, so the auth cookie stays same-origin.
-  - Pages: sign in / register, children overview, child (Today / Rules / Devices tabs), add child, apps (catalog, identifiers, "not recognised yet"), settings (name, email, password, appearance).
-  - Plain CSS in `src/index.css` with CSS variables. No CSS framework.
-  - **Colours:** the user's palette (2026-10-14). **Dark is the default** (`:root`), and light is `body.light`.
-    - Each colour is given in `hsl` (fallback) and then `oklch`. Use only these variables (`--bg-dark`, `--bg`, `--bg-light`, `--text`, `--text-muted`, `--highlight`, `--border`, `--border-muted`, `--primary`, `--secondary`, `--danger`, `--warning`, `--success`, `--info`); don't add raw colours (transparent black for shadows and the dialog backdrop is the only exception).
-    - Usage: page `--bg`, cards `--bg-light`, top bar `--bg-dark`, dividers `--border-muted`, inputs `--border`, family-made apps `--secondary`.
-  - **Theme switch:** Device (default, follows the system) / Light / Dark.
-    - Saved in the browser (`localStorage` key `theme`; nothing is stored for Device). Code in `src/theme.ts` and `ThemeSwitcher`. It's shown on the Settings page (Appearance) and on the sign-in page, so signed-out visitors can change it too.
-    - A small inline script in `index.html` applies the saved theme before the page draws (no flash). Keep it in step with `theme.ts`.
-  - **All UI strings** live in `web/src/i18n/en.json` and are read with `t(key, params)`. Don't hard-code text in components.
-  - Data:
-    - `src/api/client.ts` is a fetch wrapper; its errors carry the ProblemDetails message.
-    - `src/api/types.ts` mirrors the server's Contracts.
-    - `useLoad` loads data and can poll: the Today, children and devices views refresh every 15 s.
-  - Lint and format:
-    - ESLint 9 flat config (`@eslint/js`, `typescript-eslint`, `eslint-plugin-react-hooks`).
-    - Prettier: double quotes, trailing commas, 2-space indent, width 100.
-    - Run `npm run check` (types, lint, formatting) before committing.
-  - **No frontend tests** for now. Rely on type checks, lint, server tests and a manual click-through.
-  - npm packages (approved): `react`, `react-dom`, `react-router`, plus dev tooling: `vite`, `@vitejs/plugin-react`, `typescript`, `@types/*`, the ESLint packages above, `prettier`. Anything else: ask first.
-
 ## Unconfirmed defaults
-
-Nothing is pending right now. When Claude has to assume a convention the user hasn't confirmed, it goes here until the user agrees. Licence and CI are still undecided.
+Nothing is pending. When Claude has to assume a convention the user hasn't confirmed, it goes here until the user agrees. Licence and CI are still undecided.
