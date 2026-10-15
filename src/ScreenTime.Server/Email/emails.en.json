@@ -12,7 +12,7 @@
   "passwordChanged.subject": "Your Screen Time password was changed",
   "passwordChanged.body": "Hi,\n\nThe password for your Screen Time account was just changed. If that was you, there's nothing more to do.\n\nIf this wasn't you, reset your password now with this link, which also signs everyone else out:\n\n{link}\n\nThe link works for 1 hour. After that, ask for a new one here:\n\n{forgotLink}",
   "code.subject": "Your Screen Time code: {code}",
-  "code.body": "Hi,\n\nYour Screen Time code is:\n\n{code}\n\nIt works once, for 10 minutes.\n\nIf you didn't just ask for a code, someone else knows your password. Choose a new one with this link, which also signs everyone else out:\n\n{forgotLink}",
+  "code.body": "Your Screen Time code is:\n\n{code}\n\nThis code is only valid for 10 minutes.\n\nIf you didn't request a code, you can safely ignore this email.",
   "twoFactorChanged.subject": "Your Screen Time sign-in security changed",
   "twoFactorChanged.body": "Hi,\n\n{change} If that was you, there's nothing more to do.\n\nIf this wasn't you, someone else is signed in to your account. Reset your password now with this link, which also signs everyone else out:\n\n{link}\n\nThe link works for 1 hour. After that, ask for a new one here:\n\n{forgotLink}",
   "twoFactorChanged.appOn": "An authenticator app was just turned on for your Screen Time account. Your sign-in codes now come from that app.",
