@@ -5,6 +5,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="MailKit" Version="4.18.1" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.12" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.12">
@@ -14,6 +15,15 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.12" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" Version="10.3.0" />
+    <!-- Pulled in by MailKit. Pinned above 10.0.12, which has known vulnerabilities (CVE-2026-84008, CVE-2026-70162). -->
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Email texts are read from the assembly, not from a file next to it. Without WithCulture="false",
+         the ".en" would move them into a satellite assembly. -->
+    <Content Remove="Email\emails.en.json" />
+    <EmbeddedResource Include="Email\emails.en.json" LogicalName="emails.en.json" WithCulture="false" />
   </ItemGroup>
 
   <PropertyGroup>

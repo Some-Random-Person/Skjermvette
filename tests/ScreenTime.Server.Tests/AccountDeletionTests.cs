@@ -117,7 +117,7 @@ public class AccountDeletionTests
         using (var scope = factory.Services.CreateScope())
         {
             var users = scope.ServiceProvider.GetRequiredService<UserManager<ParentUser>>();
-            var second = new ParentUser { UserName = "bob@example.com", Email = "bob@example.com", FamilyId = familyId };
+            var second = new ParentUser { UserName = "bob@example.com", Email = "bob@example.com", EmailConfirmed = true, FamilyId = familyId };
             Assert.True((await users.CreateAsync(second, Password)).Succeeded);
         }
 

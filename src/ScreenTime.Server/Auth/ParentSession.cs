@@ -14,6 +14,12 @@ public static class ParentSession
     /// <summary>PBKDF2-HMAC-SHA512 iterations for parent passwords (above OWASP's 210,000 minimum).</summary>
     public const int PasswordHashIterations = 250_000;
 
+    /// <summary>How long an email confirmation link works. The email says so (<c>emails.en.json</c>).</summary>
+    public static readonly TimeSpan ConfirmationLinkLifespan = TimeSpan.FromHours(24);
+
+    /// <summary>How long a password reset link works. The email says so (<c>emails.en.json</c>).</summary>
+    public static readonly TimeSpan PasswordResetLinkLifespan = TimeSpan.FromHours(1);
+
     /// <summary>
     /// Signs a parent in (or refreshes their cookie after an account change) with a persistent cookie.
     /// The family claim comes from <see cref="ParentClaimsFactory"/>.

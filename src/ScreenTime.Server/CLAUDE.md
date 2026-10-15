@@ -20,8 +20,8 @@ Loaded when working in `src/ScreenTime.Server/`. General rules and the C# code s
 ## DI and config
 - The DbContext is registered with `AddDbContext` (scoped). Anything that uses it is `AddScoped`, never a singleton. Background jobs create their own scope.
 - Use the registered `TimeProvider`, never `DateTime.Now`/`UtcNow`, so tests can control time.
-- **Production:** environment variables only (`ConnectionStrings__DefaultConnection`, `Database__Provider` = `Sqlite` | `Postgres`). Fail fast at startup if either is missing. A gitignored `.env` holds the values, and `.env.example` is committed.
-- **Development:** `appsettings.Development.json` points at a local SQLite file, so `dotnet run` works without a `.env`.
+- **Production:** environment variables only: `ConnectionStrings__DefaultConnection`, `Database__Provider` (`Sqlite` | `Postgres`), `App__PublicUrl`, and email (`Email__From`, `Email__Smtp__Host|Port|User|Password`). Fail fast at startup if any required one is missing. A gitignored `.env` holds the values, and `.env.example` is committed.
+- **Development:** `appsettings.Development.json` points at a local SQLite file and writes emails to `src/ScreenTime.Server/emails/` (gitignored) instead of sending them, so `dotnet run` works without a `.env`. Email links point at the Vite dev server (`http://localhost:5173`).
 - **Hosting:** behind a Cloudflare Tunnel (`cloudflared` on the host, TLS at Cloudflare, client IP in `CF-Connecting-IP` / `X-Forwarded-For`), with the container port published on `127.0.0.1` only. Forwarded headers aren't handled yet (#6).
 
 ## Auth
@@ -29,10 +29,20 @@ Loaded when working in `src/ScreenTime.Server/`. General rules and the C# code s
   - Sign-ins are **re-checked against the database every minute** (security stamp, `ParentSession.RecheckInterval`). A password or email change, or a deleted account, signs other browsers out within a minute. Anything that should cut off a parent's access (e.g. removing them from a family, #29) must call `UpdateSecurityStampAsync`.
   - The `family_id` claim is added by `ParentClaimsFactory`, so it survives the re-check. Don't add claims by hand at sign-in; use `ParentSession.SignInAsync`.
   - **Passwords:** PBKDF2-HMAC-SHA512 with a random 128-bit salt, at **250,000 iterations** (`ParentSession.PasswordHashIterations`; Identity's default is 100,000 and OWASP recommends at least 210,000). Older hashes are upgraded at the next sign-in, which also changes the security stamp.
-  - **Account settings** (`/api/account/name|email|password`): email and password changes need the current password, and wrong attempts count toward the 5-attempt lockout. There's **no confirmation email** (the server doesn't send email yet, #27). `/api/auth/me` reads the user from the database.
+  - **Email confirmation:** a new account can't sign in until its address is confirmed. Signing in with the right password on an unconfirmed address is 403, and the dashboard offers to send the link again (`/api/auth/resend-confirmation`). A password reset also confirms the address, since the link went to it.
+  - **Forgot password** (`/api/auth/forgot-password`, then `/reset-password` with the emailed token): the reply is the same whether or not the address has an account, and both email-sending endpoints share a rate limit (`AuthEndpoints.EmailRateLimit`, per IP; behind the tunnel that's one IP until #6). A reset signs other browsers out, lifts a lockout and makes the link single-use (it changes the security stamp).
+  - **Links in emails** carry Identity tokens, Base64Url-encoded, and point at dashboard pages that post them back. Confirmation links work for 24 hours, reset links for 1 hour (`ParentSession.*LinkLifespan`, `PasswordResetTokenProvider`). Identity checks expiry against the system clock, not `TimeProvider`.
+  - **Account settings** (`/api/account/name|email|password`): email and password changes need the current password, and wrong attempts count toward the 5-attempt lockout. Email changes aren't confirmed by email yet, and password changes aren't notified (the rest of #27). `/api/auth/me` reads the user from the database.
   - **Deleting an account** (`DELETE /api/account`, current password in the body): the user is deleted, and if no other parent is left, the family and everything under it too, in one transaction. The database cascades from the family, except the family's own apps, which are deleted first. A new table that belongs to a family must cascade from it, and `AccountDeletionTests` must count it. `GET /api/account/deletion` tells the dashboard what will be deleted.
 - **Devices:** a 6-digit pairing code (rate limited) is exchanged for a long-lived device token. Only the token's SHA-256 hash is stored. Unpaired devices have `UnpairedAtUtc` set and are left out everywhere.
 - Every parent query is scoped by the family id claim (`user.GetFamilyId()`).
+
+## Email
+- **MailKit**, behind `EmailOutbox`: a background queue, so requests don't wait for SMTP and their timing doesn't reveal whether an email was sent. Emails still queued at shutdown are lost.
+- SMTP is always encrypted: port 465 uses TLS from the start, any other port requires STARTTLS. Without `Email__Smtp__Host`, `Email__PickupDirectory` writes `.eml` files instead (development and tests).
+- `EmailSettings` reads and checks the configuration. `App__PublicUrl` is the start of every link, since the request URL isn't the public one behind the tunnel.
+- Texts live in `Email/emails.en.json` (embedded, `{name}` placeholders, plain text) so they can be translated. `AccountEmails` builds and queues the account emails.
+- Tests: `ServerFactory` points the pickup directory at a temp folder. `WaitForEmailsAsync` and `LinkIn` read the emails and their links. `CreateParentAsync` confirms the address directly in the database.
 
 ## Device API
 - `POST /api/device/usage`: batched events, idempotent by client event GUID, each at most 1 h. Every call also **renews the offline allowance** and pushes budgets to the child's devices. Agents call it about every 15 s.

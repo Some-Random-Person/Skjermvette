@@ -38,6 +38,8 @@ src/ScreenTime.Server/wwwroot/
 *.db-shm
 *.db-wal
 *.sqlite
+# Emails the development server writes instead of sending
+src/ScreenTime.Server/emails/
 .env
 .env.*
 !.env.example

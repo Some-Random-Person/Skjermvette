@@ -3,13 +3,17 @@ import { AuthProvider } from "./auth/AuthContext";
 import { useAuth } from "./auth/useAuth";
 import { ConfirmProvider } from "./confirm/ConfirmProvider";
 import { Layout } from "./components/Layout";
+import { PublicLayout } from "./components/PublicLayout";
 import { t } from "./i18n/t";
 import { AppsPage } from "./pages/AppsPage";
 import { ChildPage } from "./pages/ChildPage";
 import { ChildrenPage } from "./pages/ChildrenPage";
+import { ConfirmEmailPage } from "./pages/ConfirmEmailPage";
 import { DevicesTab } from "./pages/DevicesTab";
+import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { LoginPage } from "./pages/LoginPage";
 import { NewChildPage } from "./pages/NewChildPage";
+import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 import { RulesTab } from "./pages/RulesTab";
 import { SettingsPage } from "./pages/SettingsPage";
 import { TodayTab } from "./pages/TodayTab";
@@ -26,7 +30,13 @@ export function App() {
       <ConfirmProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/login" element={<LoginPage />} />
+            {/* Pages for signed-out parents, including the ones linked from emails. */}
+            <Route element={<PublicLayout />}>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/confirm-email" element={<ConfirmEmailPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
+            </Route>
             <Route element={<RequireSignIn />}>
               <Route element={<Layout />}>
                 <Route index element={<ChildrenPage />} />

@@ -69,6 +69,7 @@ A parental screen-time manager: **one shared daily budget across all of a child'
   - `Microsoft.AspNetCore.SignalR.Client` (agents, FakeDevice, server tests)
   - `Microsoft.Extensions.Hosting.WindowsServices`
   - `Microsoft.AspNetCore.OpenApi` and `Swashbuckle.AspNetCore.SwaggerUI`
+  - `MailKit` (server email, #27), with `System.Security.Cryptography.Pkcs` pinned to a patched version
   - Anything else: ask first.
 
 ## Unconfirmed defaults

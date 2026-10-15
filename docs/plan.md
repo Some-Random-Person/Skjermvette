@@ -37,7 +37,7 @@ In production the server runs in Docker with Postgres, behind a **Cloudflare Tun
 **Not built yet** (from the original plan): per-weekday rules in the rules editor.
 
 **Follow-up features**, tracked as issues (#31, delete account, is done):
-- #27: account emails (confirmations, forgot password; first needs email sending)
+- #27: account emails. Done: sending email (MailKit), confirming new accounts, forgot password. Left: confirming email changes and a "password changed" email
 - #28: email notifications when a child runs out of time
 - #29: invite other parents to a family
 - #30: public homepage at `/`, dashboard moved to `/dashboard`
