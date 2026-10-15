@@ -13,13 +13,34 @@ public class AccountEmails(UserManager<ParentUser> users, EmailSettings settings
     public async Task SendConfirmationAsync(ParentUser user)
     {
         var token = await users.GenerateEmailConfirmationTokenAsync(user);
-        Send(user.Email!, "confirmEmail", Link("confirm-email", user, token));
+        Send(user.Email!, "confirmEmail", new() { ["link"] = Link("confirm-email", user, token) });
     }
 
     public async Task SendPasswordResetAsync(ParentUser user)
     {
-        var token = await users.GeneratePasswordResetTokenAsync(user);
-        Send(user.Email!, "resetPassword", Link("reset-password", user, token));
+        Send(user.Email!, "resetPassword", new() { ["link"] = await ResetLinkAsync(user) });
+    }
+
+    /// <summary>
+    /// Sends a confirmation link to the new address, and tells the current address about the request,
+    /// with a link to reset the password if it wasn't them. A reset cancels the change, since it changes
+    /// the security stamp the confirmation link depends on.
+    /// </summary>
+    public async Task SendEmailChangeAsync(ParentUser user, string newEmail)
+    {
+        var token = await users.GenerateChangeEmailTokenAsync(user, newEmail);
+        Send(newEmail, "changeEmail", new() { ["link"] = Link("confirm-email-change", user, token, ("email", newEmail)) });
+        Send(user.Email!, "emailChangeRequested", new() { ["newEmail"] = newEmail, ["link"] = await ResetLinkAsync(user) });
+    }
+
+    /// <summary>Tells the parent their password changed, with a link to reset it if it wasn't them.</summary>
+    public async Task SendPasswordChangedAsync(ParentUser user)
+    {
+        Send(user.Email!, "passwordChanged", new()
+        {
+            ["link"] = await ResetLinkAsync(user),
+            ["forgotLink"] = new Uri(settings.PublicUrl, "forgot-password").ToString(),
+        });
     }
 
     /// <summary>
@@ -38,15 +59,18 @@ public class AccountEmails(UserManager<ParentUser> users, EmailSettings settings
         }
     }
 
-    private string Link(string page, ParentUser user, string token)
+    private async Task<string> ResetLinkAsync(ParentUser user) =>
+        Link("reset-password", user, await users.GeneratePasswordResetTokenAsync(user));
+
+    private string Link(string page, ParentUser user, string token, params (string Name, string Value)[] extra)
     {
         var encoded = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
-        return new Uri(settings.PublicUrl, $"{page}?userId={user.Id}&token={encoded}").ToString();
+        var query = string.Concat(extra.Select(p => $"&{p.Name}={Uri.EscapeDataString(p.Value)}"));
+        return new Uri(settings.PublicUrl, $"{page}?userId={user.Id}{query}&token={encoded}").ToString();
     }
 
-    private void Send(string to, string template, string link)
+    private void Send(string to, string template, Dictionary<string, string> values)
     {
-        var values = new Dictionary<string, string> { ["link"] = link };
         var message = new MimeMessage
         {
             Subject = EmailTemplates.Text($"{template}.subject", values),

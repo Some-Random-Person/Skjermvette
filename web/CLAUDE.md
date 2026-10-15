@@ -6,7 +6,7 @@ Loaded when working in `web/`. General rules are in the root `CLAUDE.md`.
 - React + Vite + TypeScript, with React Router for pages. Plain CSS in `src/index.css` with CSS variables. No CSS framework.
 - The production build (`npm run build`) goes into `src/ScreenTime.Server/wwwroot` (gitignored), and the server serves it.
 - Development: `npm run dev` (port 5173) forwards `/api` and `/hubs` to the server on port 5131, so the auth cookie stays same-origin.
-- Pages: sign in / register, confirm email, forgot and reset password (the last three are linked from emails), children overview, child (Today / Rules / Devices tabs), add child, apps (catalog, identifiers, "not recognised yet"), settings (name, email, password, appearance, delete account).
+- Pages: sign in / register, forgot password, the pages linked from emails (confirm email, confirm email change, reset password), children overview, child (Today / Rules / Devices tabs), add child, apps (catalog, identifiers, "not recognised yet"), settings (name, email, password, appearance, delete account).
 - **npm packages (approved):** `react`, `react-dom`, `react-router`, plus dev tooling: `vite`, `@vitejs/plugin-react`, `typescript`, `@types/*`, `eslint` 9, `@eslint/js`, `typescript-eslint`, `eslint-plugin-react-hooks`, `prettier`. Anything else: ask first.
 
 ## Rules

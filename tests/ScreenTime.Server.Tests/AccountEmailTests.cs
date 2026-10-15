@@ -120,8 +120,10 @@ public class AccountEmailTests
         var link = await ForgotPasswordAsync(factory, emailNumber: 2);
         var reset = await ResetAsync(factory, link);
         var again = await ResetAsync(factory, link, "yet-another-passphrase");
+        var notice = (await factory.WaitForEmailsAsync(Email, 3))[2];
 
         Assert.Equal(HttpStatusCode.NoContent, reset.StatusCode);
+        Assert.Equal("Your Screen Time password was changed", notice.Subject);
         Assert.Equal(HttpStatusCode.BadRequest, again.StatusCode);
         Assert.Contains("expired or was already used", await again.Content.ReadAsStringAsync());
         Assert.Equal(HttpStatusCode.OK, (await LoginAsync(factory, NewPassword)).StatusCode);
