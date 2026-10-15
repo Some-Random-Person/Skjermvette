@@ -3,7 +3,8 @@ import { api } from "../api/client";
 import { useAuth } from "../auth/useAuth";
 import { ErrorText } from "../components/ErrorText";
 import { ThemeSwitcher } from "../components/ThemeSwitcher";
-import { t } from "../i18n/t";
+import { useConfirm } from "../confirm/useConfirm";
+import { t, type StringKey } from "../i18n/t";
 import { useAction } from "../useAction";
 
 export function SettingsPage() {
@@ -18,6 +19,7 @@ export function SettingsPage() {
         <p className="muted">{t("settings.appearanceHelp")}</p>
         <ThemeSwitcher />
       </section>
+      <DeleteAccountSection />
     </div>
   );
 }
@@ -195,4 +197,69 @@ function PasswordSection() {
       <ErrorText error={error} />
     </form>
   );
+}
+
+function DeleteAccountSection() {
+  const { setMe } = useAuth();
+  const confirm = useConfirm();
+  const [password, setPassword] = useState("");
+  const { run, busy, error } = useAction();
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    await run(async () => {
+      const deletion = await api.accountDeletion();
+      const confirmed = await confirm({
+        title: t("settings.deleteConfirmTitle"),
+        message: deletion.isLastParent
+          ? t("settings.deleteLastParent", {
+              children: countText(
+                deletion.children,
+                "settings.deleteNoChildren",
+                "settings.deleteOneChild",
+                "settings.deleteChildren",
+              ),
+              devices: countText(
+                deletion.devices,
+                "settings.deleteNoDevices",
+                "settings.deleteOneDevice",
+                "settings.deleteDevices",
+              ),
+            })
+          : t("settings.deleteOtherParents"),
+        confirmLabel: t("settings.deleteSubmit"),
+        danger: true,
+      });
+      if (!confirmed) return;
+      await api.deleteAccount(password);
+      setMe(null);
+    });
+  };
+
+  return (
+    <form className="card stack danger-zone" onSubmit={submit}>
+      <h2>{t("settings.deleteTitle")}</h2>
+      <p className="muted">{t("settings.deleteHelp")}</p>
+      <label>
+        {t("settings.currentPassword")}
+        <input
+          type="password"
+          required
+          autoComplete="current-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+      </label>
+      <div>
+        <button className="danger" disabled={busy}>
+          {t("settings.deleteSubmit")}
+        </button>
+      </div>
+      <ErrorText error={error} />
+    </form>
+  );
+}
+
+function countText(count: number, none: StringKey, one: StringKey, many: StringKey) {
+  return t(count === 0 ? none : count === 1 ? one : many, { count });
 }

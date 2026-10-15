@@ -321,6 +321,10 @@ button.danger:not(.link) {
 .link.danger {
   color: var(--danger);
 }
+.danger-zone {
+  border-color: var(--danger);
+  margin-top: 1rem;
+}
 
 /* Tabs */
 .tabs {

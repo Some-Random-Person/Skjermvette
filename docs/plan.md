@@ -32,12 +32,11 @@ In production the server runs in Docker with Postgres, behind a **Cloudflare Tun
 | 4 | **Windows agent**: Service + Helper | **Next** |
 | 5 | **Browser extension** + native messaging host registration | To do |
 | 6 | Parent dashboard | Done, moved ahead of 4–5 (#9, then #12, #13, #24, #25, #26) |
-| 7 | **Deploy files** (`deploy/docker-compose.yml`, self-hosting README) | To do, together with #6 (forwarded headers behind the tunnel) |
+| 7 | **Deploy files** (`deploy/docker-compose.yml`, self-hosting README) | To do, together with #6 (forwarded headers behind the tunnel). The README must say that database backups keep data from deleted accounts (#31) |
 
 **Not built yet** (from the original plan): per-weekday rules in the rules editor.
 
-**Follow-up features**, tracked as issues:
-- #31: delete account
+**Follow-up features**, tracked as issues (#31, delete account, is done):
 - #27: account emails (confirmations, forgot password; first needs email sending)
 - #28: email notifications when a child runs out of time
 - #29: invite other parents to a family
