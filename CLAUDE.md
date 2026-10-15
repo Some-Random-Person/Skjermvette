@@ -48,7 +48,7 @@ Project root: `C:\dev\Test`. Remote: `github.com/Some-Random-Person/ScreenTimeMa
   - The child uses a standard account. The agent runs as a SYSTEM service and watches the user-session helper.
   - The browser extension is force-installed by policy, and InPrivate/Incognito is disabled.
   - Browsers without the extension are closed. Uninstalling needs a parent PIN.
-- **Plan:** `C:\Users\thomas\.claude\plans\1-parental-control-is-humble-starlight.md` (Phase 1 scope, layout, build order, verification).
+- **Plan:** [`docs/plan.md`](docs/plan.md): Phase 1 scope, status of each step, what's left (Windows agent, browser extension, deploy files), the rules agents must follow, later phases and verification. Update its status table when a step is done or a decision changes it.
 - **Non-goals:** none stated yet.
 
 ## How we work
@@ -61,6 +61,7 @@ Project root: `C:\dev\Test`. Remote: `github.com/Some-Random-Person/ScreenTimeMa
   - Match the existing style.
 - No new dependencies (NuGet, npm or other packages) beyond the approved list below without the user's clear go-ahead. Ask first.
 - When designing, rank concerns by severity, say what an addition costs, and flag unknowns instead of guessing.
+- **Running tests:** keep the failure details in the output (`[FAIL]` lines, error messages, stack traces). Never filter down to the pass/fail summary only, and count a run as failed unless it clearly says "Passed". A flaky failure once went unexplained because only the summary was kept (#22, fixed in #34). Server errors from test runs are also written to `%TEMP%\screentime-test-server-errors.log` (`ServerErrorLog`).
 
 ## Git
 
