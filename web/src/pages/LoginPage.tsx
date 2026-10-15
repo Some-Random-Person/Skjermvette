@@ -158,7 +158,7 @@ function SecondStep({
   const [method, setMethod] = useState<TwoFactorMethod>(hasApp ? "App" : "Email");
   const [code, setCode] = useState("");
   const [remember, setRemember] = useState(false);
-  const { run, busy, error } = useAction();
+  const { run, busy, error, setError } = useAction();
   const resend = useAction();
 
   const submit = async (e: FormEvent) => {
@@ -171,6 +171,7 @@ function SecondStep({
   const switchTo = (next: TwoFactorMethod) => {
     setMethod(next);
     setCode("");
+    setError(undefined);
     resend.clearDone();
     if (next === "Email") void resend.run(api.sendLoginCode);
   };
