@@ -33,7 +33,7 @@ public class TwoFactorTests
 
         var login = await LoginAsync(client);
         var beforeCode = await ChildrenStatusAsync(client);
-        var code = await factory.WaitForLoginCodeAsync(Email, 2);
+        var code = await factory.WaitForCodeAsync(Email, 2);
         var response = await CodeAsync(client, TwoFactorMethodEnum.Email, code);
 
         Assert.Equal(new LoginResponse(null, TwoFactorMethodEnum.Email), login);
@@ -109,10 +109,10 @@ public class TwoFactorTests
         await factory.CreateParentAsync(Email);
         var client = factory.CreateClient();
         await LoginAsync(client);
-        var firstCode = await factory.WaitForLoginCodeAsync(Email, 2);
+        var firstCode = await factory.WaitForCodeAsync(Email, 2);
 
         var resend = await client.PostAsync("/api/auth/login/email-code", null);
-        var newCode = await factory.WaitForLoginCodeAsync(Email, 3);
+        var newCode = await factory.WaitForCodeAsync(Email, 3);
 
         Assert.Equal(HttpStatusCode.NoContent, resend.StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await CodeAsync(client, TwoFactorMethodEnum.Email, newCode)).StatusCode);
@@ -189,7 +189,7 @@ public class TwoFactorTests
         var emailBrowser = factory.CreateClient();
         await LoginAsync(emailBrowser);
         Assert.Equal(HttpStatusCode.NoContent, (await emailBrowser.PostAsync("/api/auth/login/email-code", null)).StatusCode);
-        Assert.Equal(HttpStatusCode.OK, (await CodeAsync(emailBrowser, TwoFactorMethodEnum.Email, await factory.WaitForLoginCodeAsync(Email, 3))).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await CodeAsync(emailBrowser, TwoFactorMethodEnum.Email, await factory.WaitForCodeAsync(Email, 3))).StatusCode);
     }
 
     [Fact]
@@ -303,20 +303,21 @@ public class TwoFactorTests
     }
 
     [Fact]
-    public async Task EveryChange_IsEmailed_WithALinkToResetThePasswordIfItWasntThem()
+    public async Task AppAndRecoveryCodeChanges_AreEmailed_WithALinkToResetThePassword_ButForgettingBrowsersIsNot()
     {
         using var factory = new ServerFactory();
         var parent = await factory.CreateParentAsync(Email);
 
+        // First, so an email from it would come before the others (the outbox sends in order).
+        (await parent.PostAsync("/api/account/two-factor/forget-browsers", null)).EnsureSuccessStatusCode();
         var (key, _) = await EnableAppAsync(parent);
         (await parent.PostAsync("/api/account/two-factor/recovery-codes", null)).EnsureSuccessStatusCode();
-        (await parent.PostAsync("/api/account/two-factor/forget-browsers", null)).EnsureSuccessStatusCode();
         (await parent.SendAsync(new HttpRequestMessage(HttpMethod.Delete, "/api/account/two-factor/app")
         {
             Content = JsonContent.Create(new DisableAuthenticatorRequest(DefaultPassword, Totp.Code(key)), options: Json),
         })).EnsureSuccessStatusCode();
         // The first email is the address confirmation from registering.
-        var notices = (await factory.WaitForEmailsAsync(Email, 5)).Skip(1).ToList();
+        var notices = (await factory.WaitForEmailsAsync(Email, 4)).Skip(1).ToList();
         var link = LinkIn(notices[^1]).Query;
         var reset = await factory.CreateClient().PostAsJsonAsync("/api/auth/reset-password",
             new ResetPasswordRequest(Guid.Parse(link["userId"]), link["token"], "taking-it-back-now"), Json);
@@ -325,7 +326,6 @@ public class TwoFactorTests
         Assert.Collection(notices,
             n => Assert.Contains("authenticator app was just turned on", n.TextBody),
             n => Assert.Contains("New recovery codes were just made", n.TextBody),
-            n => Assert.Contains("remembered browsers were just forgotten", n.TextBody),
             n => Assert.Contains("authenticator app was just turned off", n.TextBody));
         Assert.Equal(HttpStatusCode.NoContent, reset.StatusCode);
     }

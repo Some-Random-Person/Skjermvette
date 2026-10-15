@@ -116,7 +116,7 @@ public static class AccountEndpoints
         if (await users.GetUserAsync(principal) is not { } user)
             return TypedResults.Unauthorized();
 
-        await emails.SendDeletionCodeAsync(user);
+        await emails.SendCodeAsync(user);
         return TypedResults.NoContent();
     }
 

@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -97,12 +96,11 @@ public class AccountDeletionTests
         var parent = await factory.CreateParentAsync("ada@example.com");
 
         var sent = await parent.PostAsync("/api/account/deletion/email-code", null);
-        var email = (await factory.WaitForEmailsAsync("ada@example.com", 2))[1];
-        var code = Regex.Match(email.TextBody!, @"\b\d{6}\b").Value;
+        // The first code was emailed when signing in.
+        var code = await factory.WaitForCodeAsync("ada@example.com", 2);
         var response = await DeleteAccountAsync(parent, Password, code);
 
         Assert.Equal(HttpStatusCode.NoContent, sent.StatusCode);
-        Assert.StartsWith("Your code to delete your Screen Time account", email.Subject);
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await parent.GetAsync("/api/children")).StatusCode);
     }

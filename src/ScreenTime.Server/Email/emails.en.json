@@ -11,14 +11,11 @@
   "registerAttempt.body": "Hi,\n\nSomeone just tried to create a Screen Time account with this email address, but it already has one.\n\nIf that was you, sign in here:\n\n{signInLink}\n\nIf you've forgotten your password, choose a new one here:\n\n{forgotLink}\n\nIf it wasn't you, you can ignore this email. Nothing has changed on your account.",
   "passwordChanged.subject": "Your Screen Time password was changed",
   "passwordChanged.body": "Hi,\n\nThe password for your Screen Time account was just changed. If that was you, there's nothing more to do.\n\nIf this wasn't you, reset your password now with this link, which also signs everyone else out:\n\n{link}\n\nThe link works for 1 hour. After that, ask for a new one here:\n\n{forgotLink}",
-  "loginCode.subject": "Your Screen Time sign-in code: {code}",
-  "loginCode.body": "Hi,\n\nYour code to sign in to Screen Time is:\n\n{code}\n\nIt works once, for 10 minutes.\n\nIf you aren't signing in right now, someone else knows your password. Choose a new one with this link, which also signs everyone else out:\n\n{forgotLink}",
-  "deletionCode.subject": "Your code to delete your Screen Time account: {code}",
-  "deletionCode.body": "Hi,\n\nYour code to delete your Screen Time account is:\n\n{code}\n\nIt works once, for 10 minutes.\n\nIf you aren't deleting your account right now, someone else is signed in to it. Choose a new password with this link, which also signs everyone else out:\n\n{forgotLink}",
+  "code.subject": "Your Screen Time code: {code}",
+  "code.body": "Hi,\n\nYour Screen Time code is:\n\n{code}\n\nIt works once, for 10 minutes.\n\nIf you didn't just ask for a code, someone else knows your password. Choose a new one with this link, which also signs everyone else out:\n\n{forgotLink}",
   "twoFactorChanged.subject": "Your Screen Time sign-in security changed",
   "twoFactorChanged.body": "Hi,\n\n{change} If that was you, there's nothing more to do.\n\nIf this wasn't you, someone else is signed in to your account. Reset your password now with this link, which also signs everyone else out:\n\n{link}\n\nThe link works for 1 hour. After that, ask for a new one here:\n\n{forgotLink}",
   "twoFactorChanged.appOn": "An authenticator app was just turned on for your Screen Time account. Your sign-in codes now come from that app.",
   "twoFactorChanged.appOff": "The authenticator app was just turned off for your Screen Time account. Your sign-in codes are emailed to you again.",
-  "twoFactorChanged.recoveryCodes": "New recovery codes were just made for your Screen Time account. The old ones no longer work.",
-  "twoFactorChanged.browsersForgotten": "All remembered browsers were just forgotten for your Screen Time account, so each one asks for a code at the next sign-in."
+  "twoFactorChanged.recoveryCodes": "New recovery codes were just made for your Screen Time account. The old ones no longer work."
 }
