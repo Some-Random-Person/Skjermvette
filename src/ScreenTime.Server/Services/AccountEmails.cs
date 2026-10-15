@@ -50,11 +50,7 @@ public class AccountEmails(UserManager<ParentUser> users, EmailSettings settings
     public async Task SendCodeAsync(ParentUser user)
     {
         var code = await users.GenerateTwoFactorTokenAsync(user, EmailCodeTokenProvider.ProviderName);
-        Send(user.Email!, "code", new()
-        {
-            ["code"] = code,
-            ["forgotLink"] = new Uri(settings.PublicUrl, "forgot-password").ToString(),
-        });
+        Send(user.Email!, "code", new() { ["code"] = code });
     }
 
     /// <summary>
