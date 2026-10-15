@@ -44,11 +44,18 @@ public class AccountEmails(UserManager<ParentUser> users, EmailSettings settings
         Send(user.Email!, "emailChangeRequested", new() { ["newEmail"] = newEmail, ["link"] = await ResetLinkAsync(user) });
     }
 
-    /// <summary>Sends a new sign-in code (the second step), which replaces any earlier one.</summary>
-    public Task SendLoginCodeAsync(ParentUser user) => SendCodeAsync(user, "loginCode");
-
-    /// <summary>Sends a code to confirm deleting the account. It's a sign-in code, so it replaces any earlier one.</summary>
-    public Task SendDeletionCodeAsync(ParentUser user) => SendCodeAsync(user, "deletionCode");
+    /// <summary>
+    /// Sends a new code, which replaces any earlier one: the second sign-in step, or to confirm deleting the account.
+    /// </summary>
+    public async Task SendCodeAsync(ParentUser user)
+    {
+        var code = await users.GenerateTwoFactorTokenAsync(user, EmailCodeTokenProvider.ProviderName);
+        Send(user.Email!, "code", new()
+        {
+            ["code"] = code,
+            ["forgotLink"] = new Uri(settings.PublicUrl, "forgot-password").ToString(),
+        });
+    }
 
     /// <summary>
     /// Tells the parent their sign-in security changed (<paramref name="change"/> is a <c>twoFactorChanged.*</c>
@@ -88,16 +95,6 @@ public class AccountEmails(UserManager<ParentUser> users, EmailSettings settings
         {
             return null;
         }
-    }
-
-    private async Task SendCodeAsync(ParentUser user, string template)
-    {
-        var code = await users.GenerateTwoFactorTokenAsync(user, EmailCodeTokenProvider.ProviderName);
-        Send(user.Email!, template, new()
-        {
-            ["code"] = code,
-            ["forgotLink"] = new Uri(settings.PublicUrl, "forgot-password").ToString(),
-        });
     }
 
     private async Task<string> ResetLinkAsync(ParentUser user) =>

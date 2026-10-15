@@ -110,15 +110,15 @@ public class ServerFactory : WebApplicationFactory<Program>
         return await users.GenerateTwoFactorTokenAsync((await users.FindByEmailAsync(email))!, TokenOptions.DefaultEmailProvider);
     }
 
-    /// <summary>Waits for the <paramref name="number"/>th sign-in code emailed to <paramref name="to"/> and returns the code.</summary>
-    public async Task<string> WaitForLoginCodeAsync(string to, int number = 1)
+    /// <summary>Waits for the <paramref name="number"/>th code emailed to <paramref name="to"/> and returns the code.</summary>
+    public async Task<string> WaitForCodeAsync(string to, int number = 1)
     {
         for (var waited = 0; ; waited += 50)
         {
-            var codes = AllEmails().Where(m => m.To.Mailboxes.Any(a => a.Address == to) && IsLoginCode(m)).ToList();
+            var codes = AllEmails().Where(m => m.To.Mailboxes.Any(a => a.Address == to) && IsCode(m)).ToList();
             if (codes.Count >= number)
                 return Regex.Match(codes[number - 1].TextBody!, @"\b\d{6}\b").Value;
-            Assert.True(waited < 10_000, "No sign-in code was emailed.");
+            Assert.True(waited < 10_000, "No code was emailed.");
             await Task.Delay(50);
         }
     }
@@ -139,12 +139,12 @@ public class ServerFactory : WebApplicationFactory<Program>
     }
 
     /// <summary>
-    /// Every email the server has sent so far, oldest first, except sign-in codes: every sign-in sends one, so
-    /// they're read with <see cref="WaitForLoginCodeAsync"/> instead.
+    /// Every email the server has sent so far, oldest first, except codes: every sign-in sends one, so
+    /// they're read with <see cref="WaitForCodeAsync"/> instead.
     /// </summary>
-    public List<MimeMessage> Emails() => AllEmails().Where(m => !IsLoginCode(m)).ToList();
+    public List<MimeMessage> Emails() => AllEmails().Where(m => !IsCode(m)).ToList();
 
-    private static bool IsLoginCode(MimeMessage email) => email.Subject?.StartsWith("Your Screen Time sign-in code") == true;
+    private static bool IsCode(MimeMessage email) => email.Subject?.StartsWith("Your Screen Time code") == true;
 
     private List<MimeMessage> AllEmails() =>
         Directory.Exists(_emailDirectory)

@@ -14,7 +14,7 @@ namespace ScreenTime.Server.Endpoints;
 /// <summary>
 /// The second sign-in step, on Settings → Security: an authenticator app with recovery codes, or (without an app)
 /// a code sent by email. Turning the app on or off changes the security stamp, which signs other browsers out.
-/// Every change is emailed to the parent, with a link to reset the password if it wasn't them.
+/// Turning the app on or off and new recovery codes are emailed to the parent, with a link to reset the password if it wasn't them.
 /// </summary>
 public static class TwoFactorEndpoints
 {
@@ -141,7 +141,7 @@ public static class TwoFactorEndpoints
     /// This changes the security stamp, so other browsers are signed out too; this one stays signed in.
     /// </summary>
     private static async Task<Results<NoContent, UnauthorizedHttpResult>> ForgetBrowsersAsync(
-        ClaimsPrincipal principal, UserManager<ParentUser> users, SignInManager<ParentUser> signIn, AccountEmails emails)
+        ClaimsPrincipal principal, UserManager<ParentUser> users, SignInManager<ParentUser> signIn)
     {
         if (await users.GetUserAsync(principal) is not { } user)
             return TypedResults.Unauthorized();
@@ -149,7 +149,6 @@ public static class TwoFactorEndpoints
         await users.UpdateSecurityStampAsync(user);
         await signIn.ForgetTwoFactorClientAsync();
         await ParentSession.SignInAsync(signIn, user);
-        await emails.SendTwoFactorChangedAsync(user, "browsersForgotten");
         return TypedResults.NoContent();
     }
 

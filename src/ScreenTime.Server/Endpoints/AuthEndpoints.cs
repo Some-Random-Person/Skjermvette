@@ -96,7 +96,7 @@ public static class AuthEndpoints
         if (user.TwoFactorEnabled)
             return TypedResults.Ok(new LoginResponse(null, TwoFactorMethodEnum.App));
 
-        await emails.SendLoginCodeAsync(user);
+        await emails.SendCodeAsync(user);
         return TypedResults.Ok(new LoginResponse(null, TwoFactorMethodEnum.Email));
     }
 
@@ -138,7 +138,7 @@ public static class AuthEndpoints
         if (await signIn.GetTwoFactorAuthenticationUserAsync() is not { } user)
             return SecondStepExpired;
 
-        await emails.SendLoginCodeAsync(user);
+        await emails.SendCodeAsync(user);
         return TypedResults.NoContent();
     }
 
