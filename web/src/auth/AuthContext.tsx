@@ -8,8 +8,8 @@ export interface Auth {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  /** Updates the signed-in parent after an account change (name or email). */
-  setMe: (me: Me) => void;
+  /** Updates the signed-in parent after an account change (name or email), or null once the account is deleted. */
+  setMe: (me: Me | null) => void;
 }
 
 export const AuthContext = createContext<Auth | null>(null);

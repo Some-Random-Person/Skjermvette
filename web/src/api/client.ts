@@ -1,5 +1,6 @@
 import { t } from "../i18n/t";
 import type {
+  AccountDeletion,
   App,
   Child,
   ChildRequest,
@@ -65,6 +66,9 @@ export const api = {
     request<Me>("PUT", "/api/account/email", { newEmail, currentPassword }),
   changePassword: (currentPassword: string, newPassword: string) =>
     request<void>("PUT", "/api/account/password", { currentPassword, newPassword }),
+  accountDeletion: () => request<AccountDeletion>("GET", "/api/account/deletion"),
+  deleteAccount: (currentPassword: string) =>
+    request<void>("DELETE", "/api/account", { currentPassword }),
 
   children: () => request<Child[]>("GET", "/api/children"),
   child: (id: string) => request<Child>("GET", `/api/children/${id}`),

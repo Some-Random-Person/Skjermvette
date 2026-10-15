@@ -12,6 +12,13 @@ export interface Me {
   familyId: string;
 }
 
+/** What deleting the account would remove. Children and devices only go when `isLastParent`. */
+export interface AccountDeletion {
+  isLastParent: boolean;
+  children: number;
+  devices: number;
+}
+
 export interface AppRule {
   appId: string;
   kind: AppRuleKind;

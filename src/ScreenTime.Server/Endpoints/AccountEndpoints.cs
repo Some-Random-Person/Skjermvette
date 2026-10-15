@@ -1,13 +1,16 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using ScreenTime.Server.Auth;
 using ScreenTime.Server.Contracts;
+using ScreenTime.Server.Data;
 using ScreenTime.Server.Data.Entities;
 
 namespace ScreenTime.Server.Endpoints;
 
-/// <summary>The signed-in parent's own account: name, email and password.</summary>
+/// <summary>The signed-in parent's own account: name, email, password and deleting it.</summary>
 public static class AccountEndpoints
 {
     public static void MapAccountEndpoints(this IEndpointRouteBuilder app)
@@ -16,6 +19,8 @@ public static class AccountEndpoints
         group.MapPut("/name", UpdateNameAsync);
         group.MapPut("/email", ChangeEmailAsync);
         group.MapPut("/password", ChangePasswordAsync);
+        group.MapGet("/deletion", GetDeletionAsync);
+        group.MapDelete("/", DeleteAsync);
     }
 
     /// <summary>Sets or clears the parent's name. Without a name, the dashboard shows the email.</summary>
@@ -75,6 +80,51 @@ public static class AccountEndpoints
             return TypedResults.ValidationProblem(ParentSession.Errors(result));
 
         await ParentSession.SignInAsync(signIn, user);
+        return TypedResults.NoContent();
+    }
+
+    /// <summary>
+    /// What deleting the account would remove, so the dashboard can warn the last parent that the family,
+    /// its children and their devices go too.
+    /// </summary>
+    private static async Task<Ok<AccountDeletionResponse>> GetDeletionAsync(ClaimsPrincipal user, AppDbContext db, CancellationToken ct)
+    {
+        var familyId = user.GetFamilyId();
+        var parents = await db.Users.CountAsync(u => u.FamilyId == familyId, ct);
+        var children = await db.Children.CountAsync(c => c.FamilyId == familyId, ct);
+        var devices = await db.Devices.CountAsync(d => d.Child.FamilyId == familyId && d.UnpairedAtUtc == null, ct);
+        return TypedResults.Ok(new AccountDeletionResponse(parents <= 1, children, devices));
+    }
+
+    /// <summary>
+    /// Deletes the parent's account and signs out. Needs the current password. If no other parent is left,
+    /// the family is deleted too: children, devices, usage history, rules and the family's own apps.
+    /// </summary>
+    private static async Task<Results<NoContent, ValidationProblem, UnauthorizedHttpResult>> DeleteAsync(
+        [FromBody] DeleteAccountRequest request, ClaimsPrincipal principal, UserManager<ParentUser> users,
+        SignInManager<ParentUser> signIn, AppDbContext db, CancellationToken ct)
+    {
+        if (await users.GetUserAsync(principal) is not { } user)
+            return TypedResults.Unauthorized();
+        if (await CurrentPasswordErrorAsync(signIn, user, request.CurrentPassword) is { } passwordError)
+            return TypedResults.ValidationProblem(passwordError);
+
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        var result = await users.DeleteAsync(user);
+        if (!result.Succeeded)
+            return TypedResults.ValidationProblem(ParentSession.Errors(result));
+
+        if (!await db.Users.AnyAsync(u => u.FamilyId == user.FamilyId, ct))
+        {
+            // The family's own apps don't cascade from the family, so they go first (with their identifiers and rules).
+            await db.AppDefinitions.Where(a => a.FamilyId == user.FamilyId).ExecuteDeleteAsync(ct);
+            // The database cascades the rest: children with their devices, leases, usage, rules, pairing codes
+            // and extra time, and the identifiers the family added to built-in apps.
+            await db.Families.Where(f => f.Id == user.FamilyId).ExecuteDeleteAsync(ct);
+        }
+        await transaction.CommitAsync(ct);
+
+        await signIn.SignOutAsync();
         return TypedResults.NoContent();
     }
 
