@@ -10,6 +10,7 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<UsageTracker>();
 builder.Services.AddSingleton<BudgetState>();
 builder.Services.AddHostedService<SyncWorker>();
+builder.Services.AddHostedService<HelperPipeServer>();
 
 await builder.Build().RunAsync();
 return Environment.ExitCode;

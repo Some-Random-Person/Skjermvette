@@ -1,4 +1,5 @@
 using ScreenTime.Core.DeviceApi;
+using ScreenTime.Core.Models;
 
 namespace ScreenTime.Agent.Service;
 

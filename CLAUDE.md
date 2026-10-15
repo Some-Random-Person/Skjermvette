@@ -8,7 +8,7 @@ Project root: `C:\dev\Test`. Remote: `github.com/Some-Random-Person/ScreenTimeMa
 - **This file:** rules for every task. Keep it short; area-specific detail goes in the files below.
 - [`docs/product.md`](docs/product.md): the full product rules. **Read it before changing how time is counted, limited or blocked.**
 - [`docs/plan.md`](docs/plan.md): Phase 1 status, what's left (Windows agent, browser extension, deploy files), the rules agents must follow, and later phases. Update its status table when a step is done.
-- `src/ScreenTime.Server/CLAUDE.md` (server, database, auth, device API), `src/ScreenTime.Agent.Service/CLAUDE.md` (Windows agent service) and `web/CLAUDE.md` (dashboard). These load automatically when working in those folders. When a new area starts (e.g. `extension/`, the agent projects), give it its own `CLAUDE.md`.
+- `src/ScreenTime.Server/CLAUDE.md` (server, database, auth, device API), `src/ScreenTime.Agent.Service/CLAUDE.md` (Windows agent service), `src/ScreenTime.Agent.Helper/CLAUDE.md` (its user-session Helper) and `web/CLAUDE.md` (dashboard). These load automatically when working in those folders. When a new area starts (e.g. `extension/`, the agent projects), give it its own `CLAUDE.md`.
 
 ## Product in short
 A parental screen-time manager: **one shared daily budget across all of a child's devices**, with a daily total, per-app limits and exempt apps. Rules that are easy to break by accident:
@@ -52,10 +52,10 @@ A parental screen-time manager: **one shared daily budget across all of a child'
 - **Projects:**
   - `src/ScreenTime.Core`: platform-neutral domain (`BudgetCalculator`, `AppResolver`, `TimeWindow`, models, `DeviceApi` types), with no I/O.
   - `src/ScreenTime.Server`
-  - `src/ScreenTime.Agent.Service`: the Windows agent's service (sync, offline allowance)
-  - `tests/ScreenTime.Core.Tests`, `tests/ScreenTime.Server.Tests`, `tests/ScreenTime.Agent.Tests` (xUnit; the agent tests use the server tests' `ServerFactory`)
+  - `src/ScreenTime.Agent.Service`: the Windows agent's service (sync, offline allowance, the Helper's pipe)
+  - `src/ScreenTime.Agent.Helper`: the Windows agent's WinForms Helper in the child's session (foreground tracking)
+  - `tests/ScreenTime.Core.Tests`, `tests/ScreenTime.Server.Tests`, `tests/ScreenTime.Agent.Tests` (xUnit; Service and Helper; the agent tests use the server tests' `ServerFactory`)
   - `tools/FakeDevice`: a fake device for testing across devices
-  - To come: `src/ScreenTime.Agent.Helper` (see `docs/plan.md`)
 - **Code style:**
   - Nullable and ImplicitUsings on. File-scoped namespaces, one type per file, namespaces matching project names.
   - Async methods end in `Async`. Private fields use `_camelCase`. Comments are sparse.
