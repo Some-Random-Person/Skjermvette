@@ -53,7 +53,7 @@ Loaded when working in `src/ScreenTime.Agent.Service/`. General rules and the C#
   - when another user signs in at the console, the old Helper is closed and one is started for the new user. While the session is switching (nobody at the console), it's left running.
 - Before starting, any Helper already in that session (left from before, or started by hand) is closed, since one per session (its mutex) would make the new one quit. The Helper is closed when the service stops.
 - **Not handled yet:** the child owns the Helper's process, so they can kill it (it comes back within a second) or hold its `Local\` mutex from another program so it keeps quitting (retried every 30 s), #60.
-- **Tried as SYSTEM** (installed by hand, 2026-10-16): starting the Helper in the user's session, it connecting to the pipe, and switching to another user (old Helper closed, new one started). Restarting after a kill and closing on service stop not yet.
+- **Tried as SYSTEM** (installed by hand, 2026-10-16): starting the Helper in the user's session, it connecting to the pipe, switching to another user (old Helper closed, new one started), restarting it after a kill (0.2 s after a long run, 2 s after a quick one) and closing it when the service stops.
 
 ## Tests (`tests/ScreenTime.Agent.Tests`)
 - `AgentHarness` runs a paired agent against the real server in memory (`ServerFactory` from the server tests), on the server's `TestClock`, with a switch that makes the network fail like an unreachable server.
