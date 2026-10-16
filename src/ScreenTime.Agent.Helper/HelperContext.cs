@@ -4,12 +4,14 @@ using ScreenTime.Core.Models;
 namespace ScreenTime.Agent.Helper;
 
 /// <summary>
-/// Runs in the child's session with no window: samples what is in use every second, and straight away when another
-/// window comes to the front, and sends it to the Service.
+/// Runs in the child's session with no window: samples what is in use (the program in front and any making sound) every
+/// second, and straight away when another window comes to the front, and sends it to the Service.
 /// </summary>
 public sealed class HelperContext : ApplicationContext
 {
     private readonly PipeSender _sender = new();
+    private readonly AudioSessions _audio = new();
+    private readonly RecentlyHeard _heard = new();
     private readonly System.Windows.Forms.Timer _timer = new() { Interval = 1000 };
     // Kept in a field so the delegate isn't collected while Windows still calls it.
     private readonly NativeMethods.WinEventProc _onForeground;
@@ -31,7 +33,9 @@ public sealed class HelperContext : ApplicationContext
     private void Sample()
     {
         var sinceLastInput = Sampler.Elapsed(NativeMethods.LastInputTick(), (uint)Environment.TickCount);
-        var inUse = Sampler.InUse(NativeMethods.ForegroundProcessPath(), sinceLastInput, _sessionActive);
+        var playing = _audio.Playing().Select(NativeMethods.ProcessPath).OfType<string>();
+        var audio = _heard.Update(TimeSpan.FromMilliseconds(Environment.TickCount64), playing);
+        var inUse = Sampler.InUse(NativeMethods.ForegroundProcessPath(), audio, sinceLastInput, _sessionActive);
         _sender.Send(inUse);
 
         var described = inUse.Length == 0 ? "nothing" : string.Join(", ", inUse.Select(k => k.Identifier));
@@ -59,6 +63,7 @@ public sealed class HelperContext : ApplicationContext
             _timer.Dispose();
             NativeMethods.UnhookWinEvent(_hook);
             _sender.Dispose();
+            _audio.Dispose();
         }
         base.Dispose(disposing);
     }
