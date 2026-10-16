@@ -38,9 +38,10 @@ public class SamplerTests
     }
 
     [Fact]
-    public void Sound_KeepsTheComputerFromGoingIdle()
+    public void NoInputForTwoMinutes_CountsOnlySound()
     {
-        Assert.Equal([ChromeKey, SpotifyKey], Sampler.InUse(Chrome, [Spotify], Sampler.IdleAfter, sessionActive: true).OrderBy(k => k.Identifier));
+        Assert.Equal([SpotifyKey], Sampler.InUse(Chrome, [Spotify], Sampler.IdleAfter, sessionActive: true));
+        Assert.Equal([ChromeKey], Sampler.InUse(Chrome, [Chrome], Sampler.IdleAfter, sessionActive: true));
     }
 
     [Fact]
