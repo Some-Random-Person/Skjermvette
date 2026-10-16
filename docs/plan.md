@@ -83,7 +83,7 @@ These are implemented on the server and in Core; an agent only has to report and
 3. **Sync every ~15 s** with `POST /api/device/usage`, plus right after reconnecting. Each sync also **renews the offline allowance**. The response carries the device's budget and its new allowance.
 4. **Live updates:** connect to the SignalR hub `/hubs/budget` with the device token. The current budget is sent **on connect** (#23) and after every change on any device of the child.
 5. **Blocking:** an app is blocked when its effective remaining time is ≤ 0. When the total runs out, block everything except exempt apps and a system allowlist (Settings, the dashboard; phone and emergency calls on mobile).
-6. **Offline:** use `BudgetCalculator.CalculateOffline(lease, exemptAppIds, usageSinceGrant)`. When the allowance runs out, block everything that isn't exempt until the device reconnects, then upload the offline usage. An allowance of 0 means locking as soon as the device goes offline.
+6. **Offline:** use `BudgetCalculator.CalculateOffline(lease, exemptAppIds, usageSinceGrant)`. When the allowance runs out, block everything that isn't exempt until the device reconnects, then upload the offline usage. An allowance of 0 means locking as soon as the device goes offline. A device that has never checked in blocks nothing.
 7. **Unpaired:** if the token is rejected (401), the device has been unpaired. Stop and show that it needs pairing again.
 8. **Tamper resistance (Windows):**
    - the child uses a standard (non-admin) account;

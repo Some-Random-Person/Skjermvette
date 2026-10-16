@@ -12,7 +12,7 @@ Loaded when working in `src/ScreenTime.Agent.Service/`. General rules and the C#
   4. keeps the SignalR hub connected; pushes update `BudgetState` between check-ins.
 - `HelperPipeServer` receives samples from the Helper and passes them to the `Enforcer` (see below).
 - `BudgetState` holds what the device may use now (`Online`, `Offline` or `Unpaired`, plus a `BudgetSnapshot`) and the family's app catalog (`Apps`, an `AppResolver`).
-- **Unreachable server** (`HttpRequestException`, including timeouts and 5xx) means offline: the budget comes from the cached allowance via `BudgetCalculator.CalculateOffline`. No allowance, or an expired one, blocks everything that isn't exempt.
+- **Unreachable server** (`HttpRequestException`, including timeouts and 5xx) means offline: the budget comes from the cached allowance via `BudgetCalculator.CalculateOffline`. An allowance used up or expired blocks everything that isn't exempt. A device that has never checked in (no allowance yet, e.g. paired but the service never reached the server) blocks nothing, so a computer that isn't set up properly can't be locked.
 - **401** means unpaired: the service logs it and stops with exit code 1. **400** on an upload drops that batch with an error in the log, since resending can't succeed.
 
 ## Data (`AgentFolder`)

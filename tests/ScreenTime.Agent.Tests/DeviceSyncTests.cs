@@ -87,7 +87,7 @@ public class DeviceSyncTests
     }
 
     [Fact]
-    public async Task OfflineWithoutEverSyncing_BlocksEverything()
+    public async Task OfflineWithoutEverSyncing_BlocksNothing()
     {
         await using var agent = await AgentHarness.StartAsync();
         agent.Offline = true;
@@ -95,7 +95,7 @@ public class DeviceSyncTests
         await agent.Sync.TickAsync(CancellationToken.None);
 
         Assert.Equal(ConnectionEnum.Offline, agent.State.Connection);
-        Assert.True(agent.State.Snapshot!.IsBlocked(null));
+        Assert.Null(agent.State.Snapshot);
     }
 
     [Fact]
