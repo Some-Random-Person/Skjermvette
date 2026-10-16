@@ -3,7 +3,7 @@ using System.Text;
 
 namespace ScreenTime.Agent.Helper;
 
-/// <summary>The Windows calls the Helper needs to see what is in front and whether anyone is using the computer.</summary>
+/// <summary>The Windows calls the Helper needs to see what is in use and whether anyone is using the computer.</summary>
 internal static class NativeMethods
 {
     public const uint EventSystemForeground = 0x0003;
@@ -16,9 +16,12 @@ internal static class NativeMethods
     public static string? ForegroundProcessPath()
     {
         var window = GetForegroundWindow();
-        if (window == IntPtr.Zero || GetWindowThreadProcessId(window, out var processId) == 0)
-            return null;
+        return window == IntPtr.Zero || GetWindowThreadProcessId(window, out var processId) == 0 ? null : ProcessPath(processId);
+    }
 
+    /// <summary>The full path of a process's program, or null if it can't be read.</summary>
+    public static string? ProcessPath(uint processId)
+    {
         var process = OpenProcess(ProcessQueryLimitedInformation, false, processId);
         if (process == IntPtr.Zero)
             return null;
@@ -41,6 +44,11 @@ internal static class NativeMethods
         return GetLastInputInfo(ref info) ? info.Time : (uint)Environment.TickCount;
     }
 
+    /// <summary>The Remote Desktop Services session a process runs in, or <see cref="uint.MaxValue"/> if it can't be read.</summary>
+    public static uint SessionOf(uint processId) => ProcessIdToSessionId(processId, out var session) ? session : uint.MaxValue;
+
+    public static uint CurrentSessionId() => SessionOf((uint)Environment.ProcessId);
+
     [DllImport("user32.dll")]
     public static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr module, WinEventProc callback, uint processId, uint threadId, uint flags);
 
@@ -58,6 +66,9 @@ internal static class NativeMethods
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
     private static extern bool QueryFullProcessImageName(IntPtr process, uint flags, StringBuilder path, ref int length);
+
+    [DllImport("kernel32.dll")]
+    private static extern bool ProcessIdToSessionId(uint processId, out uint sessionId);
 
     [DllImport("kernel32.dll")]
     private static extern bool CloseHandle(IntPtr handle);

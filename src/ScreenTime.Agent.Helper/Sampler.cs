@@ -2,19 +2,22 @@
 
 namespace ScreenTime.Agent.Helper;
 
-/// <summary>Decides what is in use from what Windows reports. Audio isn't tracked yet, so idle means nothing is in use.</summary>
+/// <summary>Decides what is in use from what Windows reports: the program in front, plus any program making sound.</summary>
 public static class Sampler
 {
-    /// <summary>No keyboard or mouse input for this long means nobody is using the computer.</summary>
+    /// <summary>No keyboard or mouse input for this long, with nothing making sound, means nobody is using the computer.</summary>
     public static readonly TimeSpan IdleAfter = TimeSpan.FromMinutes(2);
 
     /// <param name="foregroundPath">The path of the program in front, if any.</param>
+    /// <param name="audioPaths">The paths of the programs making sound.</param>
     /// <param name="sinceLastInput">How long since the last keyboard or mouse input.</param>
-    /// <param name="sessionActive">False while the session is locked or switched away from.</param>
-    public static UsageKey[] InUse(string? foregroundPath, TimeSpan sinceLastInput, bool sessionActive) =>
-        sessionActive && sinceLastInput < IdleAfter && ProcessName(foregroundPath) is { } name
-            ? [new UsageKey(MatcherKindEnum.Process, name)]
-            : [];
+    /// <param name="sessionActive">False while the session is locked or switched away from: only sound counts then.</param>
+    public static UsageKey[] InUse(string? foregroundPath, IEnumerable<string?> audioPaths, TimeSpan sinceLastInput, bool sessionActive)
+    {
+        var audio = audioPaths.Select(ProcessName).OfType<string>().ToList();
+        var foreground = sessionActive && (sinceLastInput < IdleAfter || audio.Count > 0) ? ProcessName(foregroundPath) : null;
+        return audio.Prepend(foreground).OfType<string>().Distinct().Select(name => new UsageKey(MatcherKindEnum.Process, name)).ToArray();
+    }
 
     /// <summary>The time between two tick counts (milliseconds since boot), allowing for the count wrapping after 49.7 days.</summary>
     public static TimeSpan Elapsed(uint fromTick, uint toTick) => TimeSpan.FromMilliseconds(unchecked(toTick - fromTick));

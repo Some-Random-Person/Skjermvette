@@ -6,26 +6,48 @@ namespace ScreenTime.Agent.Tests;
 public class SamplerTests
 {
     private const string Chrome = @"C:\Program Files\Google\Chrome\Application\Chrome.exe";
+    private const string Spotify = @"C:\Users\kid\AppData\Roaming\Spotify\Spotify.exe";
+    private static readonly UsageKey ChromeKey = new(MatcherKindEnum.Process, "chrome.exe");
+    private static readonly UsageKey SpotifyKey = new(MatcherKindEnum.Process, "spotify.exe");
 
     [Fact]
     public void ForegroundProgram_IsInUse_ByLowercaseProcessName()
     {
-        var key = Assert.Single(Sampler.InUse(Chrome, TimeSpan.FromSeconds(3), sessionActive: true));
+        var key = Assert.Single(Sampler.InUse(Chrome, [], TimeSpan.FromSeconds(3), sessionActive: true));
 
-        Assert.Equal(new UsageKey(MatcherKindEnum.Process, "chrome.exe"), key);
+        Assert.Equal(ChromeKey, key);
     }
 
     [Fact]
-    public void NoInputForTwoMinutes_MeansNothingInUse()
+    public void NoInputForTwoMinutes_AndNoSound_MeansNothingInUse()
     {
-        Assert.Single(Sampler.InUse(Chrome, Sampler.IdleAfter - TimeSpan.FromSeconds(1), sessionActive: true));
-        Assert.Empty(Sampler.InUse(Chrome, Sampler.IdleAfter, sessionActive: true));
+        Assert.Single(Sampler.InUse(Chrome, [], Sampler.IdleAfter - TimeSpan.FromSeconds(1), sessionActive: true));
+        Assert.Empty(Sampler.InUse(Chrome, [], Sampler.IdleAfter, sessionActive: true));
     }
 
     [Fact]
-    public void LockedSession_MeansNothingInUse()
+    public void ProgramMakingSound_IsInUse_AsWellAsTheOneInFront()
     {
-        Assert.Empty(Sampler.InUse(Chrome, TimeSpan.Zero, sessionActive: false));
+        Assert.Equal([ChromeKey, SpotifyKey], Sampler.InUse(Chrome, [Spotify], TimeSpan.Zero, sessionActive: true).OrderBy(k => k.Identifier));
+    }
+
+    [Fact]
+    public void ProgramInFront_MakingSound_IsReportedOnce()
+    {
+        Assert.Equal([ChromeKey], Sampler.InUse(Chrome, [Chrome], TimeSpan.Zero, sessionActive: true));
+    }
+
+    [Fact]
+    public void Sound_KeepsTheComputerFromGoingIdle()
+    {
+        Assert.Equal([ChromeKey, SpotifyKey], Sampler.InUse(Chrome, [Spotify], Sampler.IdleAfter, sessionActive: true).OrderBy(k => k.Identifier));
+    }
+
+    [Fact]
+    public void LockedSession_CountsOnlySound()
+    {
+        Assert.Empty(Sampler.InUse(Chrome, [], TimeSpan.Zero, sessionActive: false));
+        Assert.Equal([SpotifyKey], Sampler.InUse(Chrome, [Spotify], TimeSpan.Zero, sessionActive: false));
     }
 
     [Theory]
@@ -33,7 +55,8 @@ public class SamplerTests
     [InlineData("")]
     public void NoForegroundProgram_MeansNothingInUse(string? path)
     {
-        Assert.Empty(Sampler.InUse(path, TimeSpan.Zero, sessionActive: true));
+        Assert.Empty(Sampler.InUse(path, [], TimeSpan.Zero, sessionActive: true));
+        Assert.Equal([SpotifyKey], Sampler.InUse(path, [Spotify, path], TimeSpan.Zero, sessionActive: true));
     }
 
     [Fact]
