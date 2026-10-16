@@ -56,7 +56,7 @@ In production the server runs in Docker with Postgres, behind a **Cloudflare Tun
 - `src/ScreenTime.Server/`: ASP.NET Core minimal API. Parent auth (Identity, cookie), account settings, children and rules, apps and catalog, devices and pairing, the device API, the SignalR `BudgetHub`. It also serves the built dashboard from `wwwroot`.
 - `web/`: React + Vite + TypeScript dashboard.
 - `src/ScreenTime.Agent.Service/` (part): pairing and `forget` commands, the device token (DPAPI, folder open only to SYSTEM and Administrators), the SQLite outbox, the 15-second check-in, the SignalR connection, the offline allowance and stopping when unpaired. Receives usage samples from the Helper over a named pipe (open only to SYSTEM and the signed-in user) into its `UsageTracker`. See its `CLAUDE.md`.
-- `src/ScreenTime.Agent.Helper/` (part): foreground tracking (`SetWinEventHook` plus a 1-second tick, reported by process name), audio (WASAPI `IAudioSessionManager2`, processes making sound, by process name), idle after 2 minutes without input or sound, and the pipe to the Service. See its `CLAUDE.md`.
+- `src/ScreenTime.Agent.Helper/` (part): foreground tracking (`SetWinEventHook` plus a 1-second tick, reported by process name), audio (WASAPI `IAudioSessionManager2`, processes making sound, by process name), idle after 2 minutes without input (then only sound counts), and the pipe to the Service. See its `CLAUDE.md`.
 - `tests/ScreenTime.Core.Tests/`, `tests/ScreenTime.Server.Tests/`, `tests/ScreenTime.Agent.Tests/` (xUnit, `WebApplicationFactory`, SQLite).
 - `tools/FakeDevice/`: pairs like a real device and reports made-up usage. Use it to test across devices.
 

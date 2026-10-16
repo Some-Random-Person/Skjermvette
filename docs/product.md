@@ -22,7 +22,7 @@ How ScreenTimeManagement behaves, in detail. Read this before changing anything 
 - The same goes for each app's limit: YouTube on two devices at once counts 1 min of YouTube per minute.
 - **Background audio counts toward the playing app's own limit** (e.g. YouTube in a hidden tab), but not twice toward the total. Agents report everything in use: the foreground app plus any app playing audio.
 - **Websites count** toward the matching app. youtube.com in a browser = YouTube, and subdomains match (the most specific domain wins).
-- Idle time doesn't count: no input for 2 min **and** no audio playing.
+- Idle time doesn't count: after 2 min without input, only apps playing audio count (not the app in front, unless it's the one playing). No input **and** no audio means nothing counts. (Decided by the user on 2026-10-16.)
 - **Day boundary:** the child's time zone plus a configurable reset hour.
 
 ## Logical apps
