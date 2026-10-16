@@ -11,6 +11,7 @@ Loaded when working in `src/ScreenTime.Agent.Service/`. General rules and the C#
   3. uploads the outbox in batches of 500 (an empty batch when there's nothing new, which still renews the offline allowance);
   4. keeps the SignalR hub connected; pushes update `BudgetState` between check-ins.
 - `HelperPipeServer` receives samples from the Helper and passes them to the `Enforcer` (see below).
+- `HelperWorker` keeps the Helper running (see below).
 - `BudgetState` holds what the device may use now (`Online`, `Offline` or `Unpaired`, plus a `BudgetSnapshot`) and the family's app catalog (`Apps`, an `AppResolver`).
 - **Unreachable server** (`HttpRequestException`, including timeouts and 5xx) means offline: the budget comes from the cached allowance via `BudgetCalculator.CalculateOffline`. No allowance, or an expired one, blocks everything that isn't exempt.
 - **401** means unpaired: the service logs it and stops with exit code 1. **400** on an upload drops that batch with an error in the log, since resending can't succeed.
@@ -42,8 +43,19 @@ Loaded when working in `src/ScreenTime.Agent.Service/`. General rules and the C#
 - One Helper at a time: a new connection replaces the previous one.
 - **Not checked yet:** which program is on the other end. Any program the user runs can send samples (e.g. empty ones). Checking the client's executable is part of tamper resistance.
 
+## Starting the Helper (`HelperWorker`)
+- Every second: when a user is signed in at the console (`ConsoleSession`), the Helper runs in their session, started as them with `WTSQueryUserToken` + `CreateProcessAsUser` on `winsta0\default` (`HelperLauncher`). Only works as SYSTEM: in a console (Development) it logs that and the Helper is started by hand.
+- Where: `Agent:HelperPath`, or `ScreenTime.Agent.Helper.exe` next to the service (installing has to put it there).
+- When to start, wait or close is decided by `HelperSupervisor`, which needs no Windows:
+  - a Helper that stops after running at least 30 s (e.g. the child killed it) is started again straight away;
+  - one that keeps stopping sooner, or can't be started, is retried after 1 s, doubling up to 30 s;
+  - when another user signs in at the console, the old Helper is closed and one is started for the new user. While the session is switching (nobody at the console), it's left running.
+- Before starting, any Helper already in that session (left from before, or started by hand) is closed, since one per session (its mutex) would make the new one quit. The Helper is closed when the service stops.
+- **Not handled yet:** the child owns the Helper's process, so they can kill it (it comes back within a second) or hold its `Local\` mutex from another program so it keeps quitting (retried every 30 s), #60. Neither has been tried as SYSTEM yet; that needs the service installed.
+
 ## Tests (`tests/ScreenTime.Agent.Tests`)
 - `AgentHarness` runs a paired agent against the real server in memory (`ServerFactory` from the server tests), on the server's `TestClock`, with a switch that makes the network fail like an unreachable server.
 - `HelperPipeServerTests` runs the Helper's `PipeSender` against `HelperPipeServer` over a real pipe (unique name per test), as the signed-in user.
 - `EnforcerTests` passes the `Enforcer` a fake for closing programs, so nothing is killed.
+- `HelperSupervisorTests` drive `HelperSupervisor` with the server tests' `TestClock`; starting a process as another user isn't tested (it needs SYSTEM).
 - `ServerClient` takes a handler factory for this only: SignalR disposes the handler it's given, so each use gets a new one.

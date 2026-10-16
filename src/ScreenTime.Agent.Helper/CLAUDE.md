@@ -4,7 +4,7 @@ Loaded when working in `src/ScreenTime.Agent.Helper/`. General rules and the C# 
 
 ## Shape
 - WinForms, `net10.0-windows`, no window of its own (`HelperContext`, an `ApplicationContext`). It runs in the child's session because a SYSTEM service can't see the foreground window or show UI.
-- One per session (a `Local\` mutex). Debug builds are console apps that print what's in use; Release builds are `WinExe`. For now it's started by hand (`dotnet run --project src/ScreenTime.Agent.Helper`); the Service will launch it later.
+- One per session (a `Local\` mutex). Debug builds are console apps that print what's in use; Release builds are `WinExe`. The Service starts it in the signed-in user's session and restarts it when it stops (`HelperWorker` in the Service). In development the Service doesn't run as SYSTEM and can't, so start it by hand (`dotnet run --project src/ScreenTime.Agent.Helper`).
 - Win32 calls live in `NativeMethods` (`DllImport`), WASAPI's COM interfaces in `AudioSessions`. Anything that doesn't need Windows goes in `Sampler`, `RecentlyHeard` or `NoticeText`, so it can be unit tested.
 
 ## What it reports

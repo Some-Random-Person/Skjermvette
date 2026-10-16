@@ -12,6 +12,7 @@ builder.Services.AddSingleton<BudgetState>();
 builder.Services.AddSingleton<Enforcer>();
 builder.Services.AddHostedService<SyncWorker>();
 builder.Services.AddHostedService<HelperPipeServer>();
+builder.Services.AddHostedService<HelperWorker>();
 
 await builder.Build().RunAsync();
 return Environment.ExitCode;
