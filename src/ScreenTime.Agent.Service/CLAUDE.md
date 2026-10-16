@@ -45,13 +45,15 @@ Loaded when working in `src/ScreenTime.Agent.Service/`. General rules and the C#
 
 ## Starting the Helper (`HelperWorker`)
 - Every second: when a user is signed in at the console (`ConsoleSession`), the Helper runs in their session, started as them with `WTSQueryUserToken` + `CreateProcessAsUser` on `winsta0\default` (`HelperLauncher`). Only works as SYSTEM: in a console (Development) it logs that and the Helper is started by hand.
-- Where: `Agent:HelperPath`, or `ScreenTime.Agent.Helper.exe` next to the service (installing has to put it there).
+- Where: `Agent:HelperPath`, or `ScreenTime.Agent.Helper.exe` next to the service (installing has to put it there). Every user who can sign in must be able to read that folder (e.g. Program Files): started from a user's profile, it fails for other users.
+- The Helper's `Process` comes from `GetProcessById`, so it has no `ExitCode` (reading it throws).
 - When to start, wait or close is decided by `HelperSupervisor`, which needs no Windows:
   - a Helper that stops after running at least 30 s (e.g. the child killed it) is started again straight away;
   - one that keeps stopping sooner, or can't be started, is retried after 1 s, doubling up to 30 s;
   - when another user signs in at the console, the old Helper is closed and one is started for the new user. While the session is switching (nobody at the console), it's left running.
 - Before starting, any Helper already in that session (left from before, or started by hand) is closed, since one per session (its mutex) would make the new one quit. The Helper is closed when the service stops.
-- **Not handled yet:** the child owns the Helper's process, so they can kill it (it comes back within a second) or hold its `Local\` mutex from another program so it keeps quitting (retried every 30 s), #60. Neither has been tried as SYSTEM yet; that needs the service installed.
+- **Not handled yet:** the child owns the Helper's process, so they can kill it (it comes back within a second) or hold its `Local\` mutex from another program so it keeps quitting (retried every 30 s), #60.
+- **Tried as SYSTEM** (installed by hand, 2026-10-16): starting the Helper in the user's session, it connecting to the pipe, and switching to another user (old Helper closed, new one started). Restarting after a kill and closing on service stop not yet.
 
 ## Tests (`tests/ScreenTime.Agent.Tests`)
 - `AgentHarness` runs a paired agent against the real server in memory (`ServerFactory` from the server tests), on the server's `TestClock`, with a switch that makes the network fail like an unreachable server.

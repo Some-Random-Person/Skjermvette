@@ -37,7 +37,8 @@ public sealed class HelperWorker(IConfiguration configuration, TimeProvider time
             {
                 if (helper is { HasExited: true })
                 {
-                    logger.LogWarning("The Helper stopped (exit code {ExitCode}).", helper.ExitCode);
+                    // No exit code: the process wasn't started through Process, which then can't read it.
+                    logger.LogWarning("The Helper stopped.");
                     helper.Dispose();
                     helper = null;
                 }
