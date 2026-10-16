@@ -23,7 +23,7 @@ public sealed class Enforcer(BudgetState state, ILogger<Enforcer> logger, Func<s
         "startmenuexperiencehost.exe", "shellexperiencehost.exe", "textinputhost.exe", "screentime.agent.helper.exe",
     };
 
-    private readonly Func<string, int> _close = close ?? CloseProcesses;
+    private readonly Func<string, int> _close = close ?? (program => CloseProcesses(program, ConsoleSession.Id()));
 
     /// <summary>The thresholds in <see cref="WarnAt"/> already warned about, per app (null for the daily total).</summary>
     private readonly HashSet<(Guid? App, TimeSpan At)> _warned = [];
@@ -74,9 +74,9 @@ public sealed class Enforcer(BudgetState state, ILogger<Enforcer> logger, Func<s
         return new HelperNotice(HelperNoticeEnum.Warning, app?.Name, (int)Math.Ceiling(remaining.TotalMinutes));
     }
 
-    private static int CloseProcesses(string program)
+    /// <summary>Closes every process with a program name in a session and returns how many it closed.</summary>
+    public static int CloseProcesses(string program, int? session)
     {
-        var session = ConsoleSession.Id();
         var closed = 0;
         foreach (var process in Process.GetProcessesByName(Path.GetFileNameWithoutExtension(program)))
         {

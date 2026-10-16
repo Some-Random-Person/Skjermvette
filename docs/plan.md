@@ -29,7 +29,7 @@ In production the server runs in Docker with Postgres, behind a **Cloudflare Tun
 | 1 | Core budget engine (`BudgetCalculator`, `AppResolver`, `TimeWindow`) with tests | Done (#3, overlap rule #19) |
 | 2 | Server: EF Core, parent auth, pairing, device API, SignalR, offline allowance | Done (#5, then #20, #23, #26, #32, #35) |
 | 3 | FakeDevice tool | Done (#14, #21) |
-| 4 | **Windows agent**: Service + Helper | **In progress.** Done: the Service's sync loop (pairing, token, outbox, offline allowance, live updates, unpairing); the Helper's foreground, audio and idle tracking, sent to the Service over a named pipe; enforcement: warnings at 5 and 1 min, closing programs in use whose time is up, and the full-screen notice. Next: launching the Helper from the Service, then installing. Browser policies wait for the extension (step 5) |
+| 4 | **Windows agent**: Service + Helper | **In progress.** Done: the Service's sync loop (pairing, token, outbox, offline allowance, live updates, unpairing); the Helper's foreground, audio and idle tracking, sent to the Service over a named pipe; enforcement: warnings at 5 and 1 min, closing programs in use whose time is up, and the full-screen notice; the Service starting the Helper in the signed-in user's session and restarting it (tried installed as SYSTEM). Next: installing. Browser policies wait for the extension (step 5) |
 | 5 | **Browser extension** + native messaging host registration | To do |
 | 6 | Parent dashboard | Done, moved ahead of 4–5 (#9, then #12, #13, #24, #25, #26) |
 | 7 | **Deploy files** (`deploy/docker-compose.yml`, self-hosting README) | To do, together with #6 (forwarded headers behind the tunnel). The README must say that database backups keep data from deleted accounts (#31). The server image must use ASP.NET Core runtime 10.0.13 or later (security fixes, #39) |
@@ -55,7 +55,7 @@ In production the server runs in Docker with Postgres, behind a **Cloudflare Tun
   - `DeviceApi/`: request and response types for the device API, shared by the server, FakeDevice and the agents.
 - `src/ScreenTime.Server/`: ASP.NET Core minimal API. Parent auth (Identity, cookie), account settings, children and rules, apps and catalog, devices and pairing, the device API, the SignalR `BudgetHub`. It also serves the built dashboard from `wwwroot`.
 - `web/`: React + Vite + TypeScript dashboard.
-- `src/ScreenTime.Agent.Service/` (part): pairing and `forget` commands, the device token (DPAPI, folder open only to SYSTEM and Administrators), the SQLite outbox, the 15-second check-in, the SignalR connection, the offline allowance and stopping when unpaired. Receives usage samples from the Helper over a named pipe (open only to SYSTEM and the signed-in user) into its `UsageTracker`. See its `CLAUDE.md`.
+- `src/ScreenTime.Agent.Service/` (part): pairing and `forget` commands, the device token (DPAPI, folder open only to SYSTEM and Administrators), the SQLite outbox, the 15-second check-in, the SignalR connection, the offline allowance and stopping when unpaired. Receives usage samples from the Helper over a named pipe (open only to SYSTEM and the signed-in user) into its `UsageTracker`. Closes programs whose time is up. Keeps the Helper running in the signed-in user's session (`WTSQueryUserToken` + `CreateProcessAsUser`, as SYSTEM only). See its `CLAUDE.md`.
 - `src/ScreenTime.Agent.Helper/` (part): foreground tracking (`SetWinEventHook` plus a 1-second tick, reported by process name), audio (WASAPI `IAudioSessionManager2`, processes making sound, by process name), idle after 2 minutes without input (then only sound counts), and the pipe to the Service. See its `CLAUDE.md`.
 - `tests/ScreenTime.Core.Tests/`, `tests/ScreenTime.Server.Tests/`, `tests/ScreenTime.Agent.Tests/` (xUnit, `WebApplicationFactory`, SQLite).
 - `tools/FakeDevice/`: pairs like a real device and reports made-up usage. Use it to test across devices.
@@ -64,7 +64,6 @@ In production the server runs in Docker with Postgres, behind a **Cloudflare Tun
 - `src/ScreenTime.Agent.Service/` (the rest): installed as a Windows Service (LocalSystem, auto-restart on failure).
   - Enforcement (closing blocked programs in use and the Helper's notices are done):
     - sets Edge/Chrome policies in the registry: force-install the extension, disable InPrivate/Incognito, block developer mode.
-  - Keeps the Helper running in the active user session (`WTSQueryUserToken` + `CreateProcessAsUser`) and restarts it if it's killed.
 - `src/ScreenTime.Agent.Helper/` (the rest): small WinForms app in the child's session. It's needed because a SYSTEM service can't see the foreground window or show UI.
   - Audible tabs through the extension (which processes play audio is done).
   - **Native messaging host** for the extension. When a browser is in front, time goes to the app for the active tab's domain, not to "Chrome".
