@@ -7,6 +7,7 @@ namespace ScreenTime.Core;
 /// <summary>
 /// What the Windows agent's Helper sends the Service over a named pipe, about once a second: one message per sample,
 /// holding everything in use right now as a JSON array of <see cref="UsageKey"/>. An empty array means nothing is in use.
+/// The Service answers on the same pipe with <see cref="HelperNotice"/>s, one JSON object per line.
 /// </summary>
 public static class HelperPipe
 {
@@ -38,5 +39,21 @@ public static class HelperPipe
         var valid = keys is { Length: <= MaxKeys } && keys.All(k =>
             k is not null && Enum.IsDefined(k.Kind) && !string.IsNullOrWhiteSpace(k.Identifier) && k.Identifier.Length <= MaxIdentifierLength);
         return valid ? keys : null;
+    }
+
+    /// <summary>One line: the JSON has no line breaks of its own.</summary>
+    public static byte[] EncodeNotice(HelperNotice notice) => [.. JsonSerializer.SerializeToUtf8Bytes(notice, Json), (byte)'\n'];
+
+    /// <summary>The notice on <paramref name="line"/>, or null if it isn't a valid one.</summary>
+    public static HelperNotice? DecodeNotice(string line)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<HelperNotice>(line, Json) is { } notice && Enum.IsDefined(notice.Kind) ? notice : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 }

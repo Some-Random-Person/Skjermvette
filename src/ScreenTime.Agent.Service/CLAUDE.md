@@ -10,8 +10,8 @@ Loaded when working in `src/ScreenTime.Agent.Service/`. General rules and the C#
   2. reads rules and the app catalog (`/api/device/state`) at the start and every 5 minutes, since mappings aren't pushed;
   3. uploads the outbox in batches of 500 (an empty batch when there's nothing new, which still renews the offline allowance);
   4. keeps the SignalR hub connected; pushes update `BudgetState` between check-ins.
-- `HelperPipeServer` receives samples from the Helper (see below).
-- `BudgetState` holds what the device may use now (`Online`, `Offline` or `Unpaired`, plus a `BudgetSnapshot`). Enforcement will read it.
+- `HelperPipeServer` receives samples from the Helper and passes them to the `Enforcer` (see below).
+- `BudgetState` holds what the device may use now (`Online`, `Offline` or `Unpaired`, plus a `BudgetSnapshot`) and the family's app catalog (`Apps`, an `AppResolver`).
 - **Unreachable server** (`HttpRequestException`, including timeouts and 5xx) means offline: the budget comes from the cached allowance via `BudgetCalculator.CalculateOffline`. No allowance, or an expired one, blocks everything that isn't exempt.
 - **401** means unpaired: the service logs it and stops with exit code 1. **400** on an upload drops that batch with an error in the log, since resending can't succeed.
 
@@ -27,9 +27,17 @@ Loaded when working in `src/ScreenTime.Agent.Service/`. General rules and the C#
 - A sample is stamped with the service's own clock when it arrives; the Helper sends no times.
 - A key missing from samples for more than 5 s has stopped. Ongoing use is cut into a new event at every check-in, so events are short and safe to resend.
 
+## Enforcement (`Enforcer`)
+- Runs on every sample, against the latest `BudgetState` (renewed at each 15-second check-in and on pushes, so a limit can be passed by up to about 15 s). Nothing is enforced before the first budget arrives.
+- **Warnings** at 5 and 1 minute left, once each per app (or for the daily total), for what is in use. Which one is named: the app, when its own limit runs out before the total. A threshold is forgotten once there's more time again (extra time, a new day).
+- **Closing:** a program in use (in front or making sound) whose time is up is closed, every process with that name in the console session (`Process.Kill`, as SYSTEM). Programs only running in the background aren't counted and are left alone. Websites (domain keys) can't be closed here; the extension will block them.
+- When the total is used up, unmapped programs are closed too. Exempt apps and Windows itself (`AlwaysAllowed`: the desktop, Start, Settings, the lock screen, the Helper) never are.
+- Each warning, and each closing that closed something, is sent to the Helper as a `HelperNotice`.
+
 ## Helper pipe (`HelperPipeServer`)
 - Named pipe `ScreenTime.Agent`, message mode, one message per sample (`HelperPipe` in Core: a JSON array of `UsageKey`, at most 8 KB and 32 keys). Anything else disconnects the client.
-- **ACL:** SYSTEM and the service's own account (the same once installed; the developer in a console) get full control. The user signed in at the console (`ConsoleSession.User()`, not Remote Desktop) gets only `ClientRights` (connect and write), not `GENERIC_WRITE`, which would let them create instances of the pipe and pose as the service.
+- The Service answers on the same pipe with `HelperNotice`s, one JSON object per line, since the user can't switch the pipe to message mode for reading.
+- **ACL:** SYSTEM and the service's own account (the same once installed; the developer in a console) get full control. The user signed in at the console (`ConsoleSession.User()`, not Remote Desktop) gets only `ClientRights` (connect, read and write), not `GENERIC_WRITE`, which would let them create instances of the pipe and pose as the service.
 - An instance is always open, so the name can't be taken while the service runs. When the console user changes, every instance is closed and the pipe is created again (`FirstPipeInstance`) for the new user.
 - One Helper at a time: a new connection replaces the previous one.
 - **Not checked yet:** which program is on the other end. Any program the user runs can send samples (e.g. empty ones). Checking the client's executable is part of tamper resistance.
@@ -37,4 +45,5 @@ Loaded when working in `src/ScreenTime.Agent.Service/`. General rules and the C#
 ## Tests (`tests/ScreenTime.Agent.Tests`)
 - `AgentHarness` runs a paired agent against the real server in memory (`ServerFactory` from the server tests), on the server's `TestClock`, with a switch that makes the network fail like an unreachable server.
 - `HelperPipeServerTests` runs the Helper's `PipeSender` against `HelperPipeServer` over a real pipe (unique name per test), as the signed-in user.
+- `EnforcerTests` passes the `Enforcer` a fake for closing programs, so nothing is killed.
 - `ServerClient` takes a handler factory for this only: SignalR disposes the handler it's given, so each use gets a new one.

@@ -3,6 +3,7 @@ using System.Text;
 using Microsoft.Extensions.Logging.Abstractions;
 using ScreenTime.Agent.Helper;
 using ScreenTime.Agent.Service;
+using ScreenTime.Core;
 using ScreenTime.Core.DeviceApi;
 using ScreenTime.Core.Models;
 using ScreenTime.Server.Tests;
@@ -18,11 +19,12 @@ public sealed class HelperPipeServerTests : IAsyncLifetime
     private readonly string _pipeName = $"ScreenTime.Agent.Test.{Guid.NewGuid():N}";
     private readonly TestClock _clock = new(new DateTimeOffset(2026, 10, 15, 10, 0, 0, TimeSpan.Zero));
     private readonly UsageTracker _tracker = new();
+    private readonly BudgetState _state = new(NullLogger<BudgetState>.Instance);
     private readonly HelperPipeServer _server;
 
     public HelperPipeServerTests()
     {
-        _server = new HelperPipeServer(_tracker, _clock, NullLogger<HelperPipeServer>.Instance, _pipeName);
+        _server = new HelperPipeServer(_tracker, new Enforcer(_state, NullLogger<Enforcer>.Instance, _ => 1), _clock, NullLogger<HelperPipeServer>.Instance, _pipeName);
     }
 
     public Task InitializeAsync() => _server.StartAsync(CancellationToken.None);
@@ -50,6 +52,25 @@ public sealed class HelperPipeServerTests : IAsyncLifetime
 
         Assert.NotEmpty(events);
         Assert.All(events, e => Assert.Equal(("chrome.exe", MatcherKindEnum.Process), (e.RawIdentifier, e.Kind)));
+    }
+
+    [Fact]
+    public async Task Notices_ReachTheHelper()
+    {
+        _state.Set(ConnectionEnum.Online, new BudgetSnapshot(TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, [], []));
+        using var sender = new PipeSender(_pipeName);
+
+        HelperNotice? notice = null;
+        var deadline = DateTime.UtcNow + Timeout;
+        while (notice is null && DateTime.UtcNow < deadline)
+        {
+            sender.Send([Chrome]);
+            await Task.Delay(100);
+            if (sender.TryReceive(out var received))
+                notice = received;
+        }
+
+        Assert.Equal(new HelperNotice(HelperNoticeEnum.Closed, null, 0), notice);
     }
 
     [Fact]

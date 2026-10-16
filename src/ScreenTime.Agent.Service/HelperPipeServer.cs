@@ -7,18 +7,18 @@ namespace ScreenTime.Agent.Service;
 
 /// <summary>
 /// Receives what is in use from the Helper (<see cref="HelperPipe"/>) and feeds it to the <see cref="UsageTracker"/>,
-/// stamped with this service's clock. Only SYSTEM and the user signed in at the computer can open the pipe; when that
+/// stamped with this service's clock, and to the <see cref="Enforcer"/>, whose notices go back to the Helper. Only SYSTEM and the user signed in at the computer can open the pipe; when that
 /// user changes, the pipe is closed and opened again for the new one. One Helper at a time: a new connection replaces
 /// the previous one.
 /// </summary>
-public sealed class HelperPipeServer(UsageTracker tracker, TimeProvider time, ILogger<HelperPipeServer> logger, string pipeName = HelperPipe.Name)
+public sealed class HelperPipeServer(UsageTracker tracker, Enforcer enforcer, TimeProvider time, ILogger<HelperPipeServer> logger, string pipeName = HelperPipe.Name)
     : BackgroundService
 {
     /// <summary>
-    /// What the user may do with the pipe: connect and write. Not <c>GENERIC_WRITE</c>, which would also let them create
-    /// instances of it. The Helper asks for exactly these rights.
+    /// What the user may do with the pipe: connect, read and write. Not <c>GENERIC_WRITE</c>, which would also let them
+    /// create instances of it. The Helper asks for exactly these rights.
     /// </summary>
-    public const PipeAccessRights ClientRights = PipeAccessRights.WriteData | PipeAccessRights.ReadAttributes | PipeAccessRights.Synchronize;
+    public const PipeAccessRights ClientRights = PipeAccessRights.ReadData | PipeAccessRights.WriteData | PipeAccessRights.ReadAttributes | PipeAccessRights.Synchronize;
 
     public static readonly TimeSpan UserCheck = TimeSpan.FromSeconds(5);
 
@@ -76,7 +76,7 @@ public sealed class HelperPipeServer(UsageTracker tracker, TimeProvider time, IL
             while (true)
             {
                 // An instance is always open, so the pipe's name is never free for another program to take.
-                var pipe = NamedPipeServerStreamAcl.Create(pipeName, PipeDirection.In, NamedPipeServerStream.MaxAllowedServerInstances,
+                var pipe = NamedPipeServerStreamAcl.Create(pipeName, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances,
                     PipeTransmissionMode.Message, options, HelperPipe.MaxMessageBytes, HelperPipe.MaxMessageBytes, security);
                 options &= ~PipeOptions.FirstPipeInstance;
                 try
@@ -127,6 +127,8 @@ public sealed class HelperPipeServer(UsageTracker tracker, TimeProvider time, IL
                     break;
                 }
                 tracker.Observe(time.GetUtcNow(), inUse);
+                foreach (var notice in enforcer.Check(inUse))
+                    await pipe.WriteAsync(HelperPipe.EncodeNotice(notice), ct);
             }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)

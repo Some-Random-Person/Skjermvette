@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using ScreenTime.Core;
 using ScreenTime.Core.Models;
 
 namespace ScreenTime.Agent.Service;
@@ -12,6 +13,11 @@ public sealed class BudgetState(ILogger<BudgetState> logger)
 
     /// <summary>Null until the first sync, and once unpaired.</summary>
     public BudgetSnapshot? Snapshot { get; private set; }
+
+    /// <summary>Maps what is in use to the family's apps. Null until the catalog is first read.</summary>
+    public AppResolver? Apps { get; private set; }
+
+    public void SetCatalog(IReadOnlyList<LogicalApp> catalog) => Apps = new AppResolver(catalog);
 
     public void Set(ConnectionEnum connection, BudgetSnapshot? snapshot)
     {

@@ -9,6 +9,7 @@ builder.Services.AddWindowsService(options => options.ServiceName = "ScreenTime 
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<UsageTracker>();
 builder.Services.AddSingleton<BudgetState>();
+builder.Services.AddSingleton<Enforcer>();
 builder.Services.AddHostedService<SyncWorker>();
 builder.Services.AddHostedService<HelperPipeServer>();
 
