@@ -33,6 +33,26 @@ public class HelperPipeTests
     }
 
     [Fact]
+    public void Notice_RoundTripsOnOneLine()
+    {
+        var notice = new HelperNotice(HelperNoticeEnum.Warning, "You\nTube", 5);
+
+        var line = Encoding.UTF8.GetString(HelperPipe.EncodeNotice(notice));
+
+        Assert.Equal(line.Length - 1, line.IndexOf('\n'));
+        Assert.Equal(notice, HelperPipe.DecodeNotice(line.TrimEnd('\n')));
+    }
+
+    [Theory]
+    [InlineData("not json")]
+    [InlineData("null")]
+    [InlineData("""{"kind":99,"app":null,"minutes":0}""")]
+    public void InvalidNotices_AreIgnored(string line)
+    {
+        Assert.Null(HelperPipe.DecodeNotice(line));
+    }
+
+    [Fact]
     public void TooManyKeys_OrTooLongIdentifiers_AreRefused()
     {
         var tooMany = Enumerable.Range(0, HelperPipe.MaxKeys + 1).Select(i => new UsageKey(MatcherKindEnum.Process, $"{i}.exe")).ToArray();

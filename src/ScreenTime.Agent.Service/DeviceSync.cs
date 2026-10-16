@@ -44,6 +44,8 @@ public sealed class DeviceSync : IAsyncDisposable
         _hub = _client.CreateHub(snapshot => _state.Set(ConnectionEnum.Online, snapshot));
         _outbox = new Outbox(folder);
         _cache = File.Exists(_cachePath) ? JsonSerializer.Deserialize<CachedBudget>(File.ReadAllText(_cachePath), ServerClient.Json) : null;
+        if (_cache is not null)
+            _state.SetCatalog(_cache.Catalog);
     }
 
     /// <exception cref="UnpairedException">The device has been unpaired; stop.</exception>
@@ -57,6 +59,7 @@ public sealed class DeviceSync : IAsyncDisposable
                 var state = await _client.StateAsync(ct);
                 _cache = new CachedBudget(state.Catalog, state.Snapshot.ExemptAppIds, _cache?.Lease);
                 _catalogLoadedAt = now;
+                _state.SetCatalog(state.Catalog);
             }
 
             var sync = await UploadAsync(ct);

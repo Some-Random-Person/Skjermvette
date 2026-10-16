@@ -8,6 +8,9 @@ public static class ConsoleSession
 {
     private const uint NoSession = 0xFFFFFFFF;
 
+    /// <summary>The console session's id, or null when there's none (e.g. while it's being switched).</summary>
+    public static int? Id() => WTSGetActiveConsoleSessionId() is var session and not NoSession ? (int)session : null;
+
     /// <summary>The signed-in user, or null when nobody is.</summary>
     public static SecurityIdentifier? User()
     {

@@ -29,7 +29,7 @@ In production the server runs in Docker with Postgres, behind a **Cloudflare Tun
 | 1 | Core budget engine (`BudgetCalculator`, `AppResolver`, `TimeWindow`) with tests | Done (#3, overlap rule #19) |
 | 2 | Server: EF Core, parent auth, pairing, device API, SignalR, offline allowance | Done (#5, then #20, #23, #26, #32, #35) |
 | 3 | FakeDevice tool | Done (#14, #21) |
-| 4 | **Windows agent**: Service + Helper | **In progress.** Done: the Service's sync loop (pairing, token, outbox, offline allowance, live updates, unpairing); the Helper's foreground, audio and idle tracking, sent to the Service over a named pipe. Next: enforcement (overlay, closing apps, browser policies), then launching the Helper from the Service and installing |
+| 4 | **Windows agent**: Service + Helper | **In progress.** Done: the Service's sync loop (pairing, token, outbox, offline allowance, live updates, unpairing); the Helper's foreground, audio and idle tracking, sent to the Service over a named pipe; enforcement: warnings at 5 and 1 min, closing programs in use whose time is up, and the full-screen notice. Next: launching the Helper from the Service, then installing. Browser policies wait for the extension (step 5) |
 | 5 | **Browser extension** + native messaging host registration | To do |
 | 6 | Parent dashboard | Done, moved ahead of 4–5 (#9, then #12, #13, #24, #25, #26) |
 | 7 | **Deploy files** (`deploy/docker-compose.yml`, self-hosting README) | To do, together with #6 (forwarded headers behind the tunnel). The README must say that database backups keep data from deleted accounts (#31). The server image must use ASP.NET Core runtime 10.0.13 or later (security fixes, #39) |
@@ -62,14 +62,13 @@ In production the server runs in Docker with Postgres, behind a **Cloudflare Tun
 
 **To do:**
 - `src/ScreenTime.Agent.Service/` (the rest): installed as a Windows Service (LocalSystem, auto-restart on failure).
-  - Enforcement:
-    - closes processes of blocked apps and tells the Helper to show the block overlay;
+  - Enforcement (closing blocked programs in use and the Helper's notices are done):
     - sets Edge/Chrome policies in the registry: force-install the extension, disable InPrivate/Incognito, block developer mode.
   - Keeps the Helper running in the active user session (`WTSQueryUserToken` + `CreateProcessAsUser`) and restarts it if it's killed.
 - `src/ScreenTime.Agent.Helper/` (the rest): small WinForms app in the child's session. It's needed because a SYSTEM service can't see the foreground window or show UI.
   - Audible tabs through the extension (which processes play audio is done).
   - **Native messaging host** for the extension. When a browser is in front, time goes to the app for the active tab's domain, not to "Chrome".
-  - Full-screen "time's up" overlay and a tray icon showing the time left.
+  - A tray icon showing the time left (the warnings and the full-screen "time's up" notice are done).
 - `extension/`: Manifest V3, TypeScript, Vite; Chrome and Edge first, Firefox later.
   - Reports the active tab's domain, window focus and audible tabs to the Helper.
   - Blocks used-up domains with `declarativeNetRequest` dynamic redirect rules to a local "blocked" page.

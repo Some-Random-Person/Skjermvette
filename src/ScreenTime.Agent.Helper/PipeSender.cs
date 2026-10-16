@@ -7,18 +7,20 @@ using ScreenTime.Core.Models;
 namespace ScreenTime.Agent.Helper;
 
 /// <summary>
-/// Sends samples to the Service over its pipe (<see cref="HelperPipe"/>), connecting again whenever the connection is lost.
-/// Only the latest sample waits to be sent; older ones are dropped.
+/// Sends samples to the Service over its pipe (<see cref="HelperPipe"/>), connecting again whenever the connection is lost,
+/// and receives the Service's notices. Only the latest sample waits to be sent; older ones are dropped.
 /// </summary>
 public sealed class PipeSender : IDisposable
 {
     public static readonly TimeSpan RetryAfter = TimeSpan.FromSeconds(2);
 
     /// <summary>Exactly what the Service grants the user (<c>HelperPipeServer.ClientRights</c>), so the connection isn't refused.</summary>
-    private const PipeAccessRights Rights = PipeAccessRights.WriteData | PipeAccessRights.ReadAttributes | PipeAccessRights.Synchronize;
+    private const PipeAccessRights Rights = PipeAccessRights.ReadData | PipeAccessRights.WriteData | PipeAccessRights.ReadAttributes | PipeAccessRights.Synchronize;
 
     private readonly Channel<UsageKey[]> _samples =
         Channel.CreateBounded<UsageKey[]>(new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.DropOldest });
+    private readonly Channel<HelperNotice> _notices =
+        Channel.CreateBounded<HelperNotice>(new BoundedChannelOptions(16) { FullMode = BoundedChannelFullMode.DropOldest });
     private readonly CancellationTokenSource _stop = new();
     private readonly Task _loop;
 
@@ -28,6 +30,9 @@ public sealed class PipeSender : IDisposable
     }
 
     public void Send(UsageKey[] inUse) => _samples.Writer.TryWrite(inUse);
+
+    /// <summary>The next notice from the Service, if one has arrived.</summary>
+    public bool TryReceive(out HelperNotice notice) => _notices.Reader.TryRead(out notice!);
 
     private async Task RunAsync(string pipeName, CancellationToken ct)
     {
@@ -41,8 +46,18 @@ public sealed class PipeSender : IDisposable
                         TokenImpersonationLevel.Identification, HandleInheritability.None);
                     await pipe.ConnectAsync(ct);
                     Console.WriteLine("Connected to the Service.");
-                    await foreach (var inUse in _samples.Reader.ReadAllAsync(ct))
-                        await pipe.WriteAsync(HelperPipe.Encode(inUse), ct);
+                    using var connected = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                    var receiving = ReceiveAsync(pipe, connected.Token);
+                    try
+                    {
+                        await foreach (var inUse in _samples.Reader.ReadAllAsync(ct))
+                            await pipe.WriteAsync(HelperPipe.Encode(inUse), ct);
+                    }
+                    finally
+                    {
+                        await connected.CancelAsync();
+                        await receiving;
+                    }
                 }
                 catch (Exception e) when (e is IOException or UnauthorizedAccessException)
                 {
@@ -53,6 +68,24 @@ public sealed class PipeSender : IDisposable
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
+        }
+    }
+
+    private async Task ReceiveAsync(NamedPipeClientStream pipe, CancellationToken ct)
+    {
+        try
+        {
+            // The pipe is read as bytes (the user may not switch it to message mode), so notices are one per line.
+            using var reader = new StreamReader(pipe, leaveOpen: true);
+            while (await reader.ReadLineAsync(ct) is { } line)
+            {
+                if (HelperPipe.DecodeNotice(line) is { } notice)
+                    _notices.Writer.TryWrite(notice);
+            }
+        }
+        catch (Exception e) when (e is IOException or OperationCanceledException)
+        {
+            // Disconnected; the sending loop connects again.
         }
     }
 
