@@ -42,6 +42,7 @@ How ScreenTimeManagement behaves, in detail. Read this before changing anything 
 - Each device holds a chunk of the remaining time that is set aside for it. The server subtracts it from what the other devices may use, so **going offline can never exceed the daily limit**.
 - An offline device counts its chunk down, then locks everything that isn't exempt. When it reconnects, it uploads its offline usage, and the unused time goes back into the pool.
 - Reservations expire at the daily reset.
+- A device that has never checked in with the server (so has never had an allowance) blocks nothing, so a computer that isn't set up yet can't be locked. (Decided by the user on 2026-10-16.)
 - Parents set it per child, with an optional per-device override: 0–60 min, **default 5**. 0 = lock as soon as the device goes offline.
 - **It must be explained in plain language** wherever a parent sees it (dashboard and README), with a worked example and the trade-off.
 

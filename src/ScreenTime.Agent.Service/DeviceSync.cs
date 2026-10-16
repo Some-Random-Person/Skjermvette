@@ -72,9 +72,14 @@ public sealed class DeviceSync : IAsyncDisposable
         }
         catch (HttpRequestException e)
         {
+            var snapshot = await OfflineSnapshotAsync(now, ct);
             if (_state.Connection != ConnectionEnum.Offline)
+            {
                 _logger.LogWarning("Can't reach the server ({Message}). Using the offline allowance.", e.Message);
-            _state.Set(ConnectionEnum.Offline, await OfflineSnapshotAsync(now, ct));
+                if (snapshot is null)
+                    _logger.LogWarning("This computer has never checked in with the server, so nothing is blocked until it does.");
+            }
+            _state.Set(ConnectionEnum.Offline, snapshot);
         }
         catch (UnpairedException)
         {
@@ -139,13 +144,16 @@ public sealed class DeviceSync : IAsyncDisposable
     }
 
     /// <summary>
-    /// The budget from the offline allowance, less what was used since it was granted. Without an allowance (none
-    /// yet, used up, or expired at the end of the day) everything that isn't exempt is blocked.
+    /// The budget from the offline allowance, less what was used since it was granted. Once the allowance is used up or
+    /// expired (at the end of the day), everything that isn't exempt is blocked. Null (nothing enforced) when the device
+    /// has never checked in, so a computer that was never set up properly isn't locked.
     /// </summary>
-    private async Task<BudgetSnapshot> OfflineSnapshotAsync(DateTimeOffset now, CancellationToken ct)
+    private async Task<BudgetSnapshot?> OfflineSnapshotAsync(DateTimeOffset now, CancellationToken ct)
     {
-        var exempt = _cache?.ExemptAppIds ?? [];
-        if (_cache?.Lease is not { } lease || !lease.IsActive(now))
+        if (_cache?.Lease is not { } lease)
+            return null;
+        var exempt = _cache.ExemptAppIds;
+        if (!lease.IsActive(now))
             return new BudgetSnapshot(TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, [], exempt);
 
         var resolver = new AppResolver(_cache.Catalog);
