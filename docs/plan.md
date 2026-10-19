@@ -61,7 +61,7 @@ In production the server runs in Docker with Postgres, behind a **Cloudflare Tun
 - `tools/FakeDevice/`: pairs like a real device and reports made-up usage. Use it to test across devices.
 
 **To do:**
-- `installer/` (done, not yet tried): WiX v5 MSI that installs the Service and Helper self-contained, registers the service (LocalSystem, auto-restart on failure), pairs from a dialog or `SERVER`/`PAIRCODE`, and forgets the pairing on uninstall. Still to do: the parent PIN for uninstalling (rule 8) and signing.
+- `installer/` (done, not yet tried): WiX v5 MSI that installs the Service and Helper self-contained, registers the service (LocalSystem, auto-restart on failure), pairs from a dialog or `SERVER`/`PAIRCODE`, and forgets the pairing on uninstall. Still to do: the parent PIN for uninstalling (rule 8, #71) and signing.
 - `src/Skjermvette.Agent.Service/` (the rest):
   - Enforcement (closing blocked programs in use and the Helper's notices are done):
     - sets Edge/Chrome policies in the registry: force-install the extension, disable InPrivate/Incognito, block developer mode.

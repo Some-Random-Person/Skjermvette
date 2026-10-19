@@ -14,7 +14,7 @@ Loaded when working in `installer/`. General rules are in the root `CLAUDE.md`; 
 - `PairDevice` runs `Skjermvette.Agent.Service.exe pair` as SYSTEM after `InstallFiles` and before `StartServices`, so the service starts paired. If it fails the install rolls back. Error 1722 (an EXE custom action failed) is overridden with what to do, since it's the only EXE action that can fail the install.
 - `ForgetDeviceRollback` comes after `PairDevice`, so it only forgets a pairing this install made, if a later step fails.
 - `ForgetDevice` runs `forget` on uninstall, after the service stops, but not when an upgrade removes the old version.
-- Not done yet: the parent PIN for uninstalling (plan rule 8; any administrator can uninstall), unpairing on the server at uninstall, and code signing (SmartScreen warns).
+- Not done yet (#71): the parent PIN for uninstalling (plan rule 8; any administrator can uninstall), unpairing on the server at uninstall, and code signing (SmartScreen warns).
 
 ## Checking a build
 - Installing it starts the real agent, which closes programs: exempt the programs in use on the test child first (README → Windows agent), and Claude asks the user before every install.
