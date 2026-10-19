@@ -7,8 +7,9 @@ Project root: `C:\dev\Test`. Remote: `github.com/Some-Random-Person/ScreenTimeMa
 ## Where things are written down
 - **This file:** rules for every task. Keep it short; area-specific detail goes in the files below.
 - [`docs/product.md`](docs/product.md): the full product rules. **Read it before changing how time is counted, limited or blocked.**
+- [`README.md`](README.md): what the product does, installation and the development commands. Keep it in step when a command, setting or install step changes.
 - [`docs/plan.md`](docs/plan.md): Phase 1 status, what's left (Windows agent, browser extension, deploy files), the rules agents must follow, and later phases. Update its status table when a step is done.
-- `src/Skjermvette.Server/CLAUDE.md` (server, database, auth, device API), `src/Skjermvette.Agent.Service/CLAUDE.md` (Windows agent service), `src/Skjermvette.Agent.Helper/CLAUDE.md` (its user-session Helper) and `web/CLAUDE.md` (dashboard). These load automatically when working in those folders. When a new area starts (e.g. `extension/`, the agent projects), give it its own `CLAUDE.md`.
+- `src/Skjermvette.Server/CLAUDE.md` (server, database, auth, device API), `src/Skjermvette.Agent.Service/CLAUDE.md` (Windows agent service), `src/Skjermvette.Agent.Helper/CLAUDE.md` (its user-session Helper), `web/CLAUDE.md` (dashboard) and `tools/FakeDevice/CLAUDE.md`. These load automatically when working in those folders. When a new area starts (e.g. `extension/`, `deploy/`), give it its own `CLAUDE.md`.
 
 ## Product in short
 A parental screen-time manager: **one shared daily budget across all of a child's devices**, with a daily total, per-app limits and exempt apps. Rules that are easy to break by accident:
@@ -42,7 +43,7 @@ A parental screen-time manager: **one shared daily budget across all of a child'
 - Claude doesn't comment on issues; questions go in chat. Ask the user before changing a label.
 
 ## Scale and ops
-- **Self-hosted:** server and Postgres via `deploy/docker-compose.yml`, exposed through a **Cloudflare Tunnel** (`cloudflared` on the host, not Caddy). Details are in `src/Skjermvette.Server/CLAUDE.md`.
+- **Self-hosted:** server and Postgres via `deploy/docker-compose.yml` (not written yet, plan step 7), exposed through a **Cloudflare Tunnel** (`cloudflared` on the host, not Caddy). Details are in `src/Skjermvette.Server/CLAUDE.md`.
 - **Dev machine:** Windows 11, .NET SDK 10, Node. No Docker or Postgres, so dev and tests use SQLite.
 - **Target load:** undecided; the working assumption is families (a few hundred to a few thousand devices per instance). Ask before designing for more.
 - **Out of scope** unless stated otherwise: multi-tenancy beyond families, i18n beyond keeping UI strings in `web/src/i18n/en.json`, and plugin architecture.
