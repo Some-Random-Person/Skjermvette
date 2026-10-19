@@ -20,11 +20,15 @@ public sealed class HelperPipeServerTests : IAsyncLifetime
     private readonly TestClock _clock = new(new DateTimeOffset(2026, 10, 15, 10, 0, 0, TimeSpan.Zero));
     private readonly UsageTracker _tracker = new();
     private readonly BudgetState _state = new(NullLogger<BudgetState>.Instance);
+    private readonly HelperProcess _helper = new(supervised: true);
     private readonly HelperPipeServer _server;
 
     public HelperPipeServerTests()
     {
-        _server = new HelperPipeServer(_tracker, new Enforcer(_state, NullLogger<Enforcer>.Instance, _ => 1), _clock, NullLogger<HelperPipeServer>.Instance, _pipeName);
+        // The test's own process is the Helper the Service started.
+        _helper.Started(Environment.ProcessId);
+        _server = new HelperPipeServer(_tracker, new Enforcer(_state, NullLogger<Enforcer>.Instance, _ => 1), _helper, _clock,
+            NullLogger<HelperPipeServer>.Instance, _pipeName);
     }
 
     public Task InitializeAsync() => _server.StartAsync(CancellationToken.None);
@@ -76,25 +80,54 @@ public sealed class HelperPipeServerTests : IAsyncLifetime
     [Fact]
     public async Task SomethingThatIsntASample_DisconnectsTheClient()
     {
+        Assert.True(await DisconnectedAsync(Encoding.UTF8.GetBytes("not a sample")));
+        Assert.Empty(_tracker.Flush(_clock.Now));
+    }
+
+    [Fact]
+    public async Task AProgramOtherThanTheHelper_IsDisconnected()
+    {
+        _helper.Started(Environment.ProcessId + 1);
+
+        Assert.True(await DisconnectedAsync(HelperPipe.Encode([])));
+        Assert.Empty(_tracker.Flush(_clock.Now));
+    }
+
+    [Fact]
+    public async Task WithNoHelperRunning_NobodyIsTaken()
+    {
+        _helper.Stopped();
+
+        Assert.True(await DisconnectedAsync(HelperPipe.Encode([Chrome])));
+        Assert.Empty(_tracker.Flush(_clock.Now));
+    }
+
+    [Fact]
+    public void NotSupervised_AnyClientIsTaken()
+    {
+        Assert.True(new HelperProcess(supervised: false).Accepts(Environment.ProcessId));
+    }
+
+    /// <summary>Keeps sending <paramref name="message"/> until the Service disconnects the client, or the time runs out.</summary>
+    private async Task<bool> DisconnectedAsync(byte[] message)
+    {
         await using var client = new NamedPipeClientStream(".", _pipeName, PipeDirection.Out, PipeOptions.Asynchronous);
         await client.ConnectAsync((int)Timeout.TotalMilliseconds);
 
-        var disconnected = false;
         var deadline = DateTime.UtcNow + Timeout;
-        while (!disconnected && DateTime.UtcNow < deadline)
+        while (DateTime.UtcNow < deadline)
         {
             try
             {
-                await client.WriteAsync(Encoding.UTF8.GetBytes("not a sample"));
+                _clock.Advance(TimeSpan.FromSeconds(1));
+                await client.WriteAsync(message);
                 await Task.Delay(100);
             }
             catch (IOException)
             {
-                disconnected = true;
+                return true;
             }
         }
-
-        Assert.True(disconnected);
-        Assert.Empty(_tracker.Flush(_clock.Now));
+        return false;
     }
 }

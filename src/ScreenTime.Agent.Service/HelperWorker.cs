@@ -8,7 +8,7 @@ namespace ScreenTime.Agent.Service;
 /// Keeps the Helper running in the session of the user signed in at the computer (see <see cref="HelperSupervisor"/>),
 /// and closes it when the service stops. Only as SYSTEM: in a console the Helper is started by hand.
 /// </summary>
-public sealed class HelperWorker(IConfiguration configuration, TimeProvider time, ILogger<HelperWorker> logger) : BackgroundService
+public sealed class HelperWorker(IConfiguration configuration, HelperProcess running, TimeProvider time, ILogger<HelperWorker> logger) : BackgroundService
 {
     public static readonly TimeSpan Interval = TimeSpan.FromSeconds(1);
 
@@ -39,6 +39,7 @@ public sealed class HelperWorker(IConfiguration configuration, TimeProvider time
                 {
                     // No exit code: the process wasn't started through Process, which then can't read it.
                     logger.LogWarning("The Helper stopped.");
+                    running.Stopped();
                     helper.Dispose();
                     helper = null;
                 }
@@ -56,7 +57,10 @@ public sealed class HelperWorker(IConfiguration configuration, TimeProvider time
                             if (helper is null)
                                 logger.LogWarning("The Helper stopped as soon as it was started in session {Session}.", session);
                             else
+                            {
+                                running.Started(helper.Id);
                                 logger.LogInformation("Started the Helper in session {Session}.", session);
+                            }
                         }
                         catch (Win32Exception e)
                         {
@@ -84,8 +88,9 @@ public sealed class HelperWorker(IConfiguration configuration, TimeProvider time
         }
     }
 
-    private static void Close(Process helper)
+    private void Close(Process helper)
     {
+        running.Stopped();
         using (helper)
         {
             try
