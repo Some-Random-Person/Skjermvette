@@ -1,6 +1,6 @@
 # Skjermvette
 
-Project root: `C:\dev\Test`. Remote: `github.com/Some-Random-Person/ScreenTimeManagement`.
+Project root: `C:\dev\Test`. Remote: `github.com/Some-Random-Person/Skjermvette`.
 
 **Hard rule:** all code for this project goes in this folder. Anything outside it is read-only reference.
 
