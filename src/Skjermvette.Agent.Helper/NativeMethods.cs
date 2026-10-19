@@ -12,11 +12,35 @@ internal static class NativeMethods
 
     public delegate void WinEventProc(IntPtr hook, uint eventType, IntPtr window, int objectId, int childId, uint thread, uint time);
 
-    /// <summary>The full path of the program whose window is in front, or null if there's none or it can't be read.</summary>
+    private delegate bool EnumWindowsProc(IntPtr window, IntPtr parameter);
+
+    /// <summary>
+    /// The full path of the program whose window is in front, or null if there's none or it can't be read. Store apps
+    /// show their windows through ApplicationFrameHost, so for those it's the app inside the frame.
+    /// </summary>
     public static string? ForegroundProcessPath()
     {
         var window = GetForegroundWindow();
-        return window == IntPtr.Zero || GetWindowThreadProcessId(window, out var processId) == 0 ? null : ProcessPath(processId);
+        if (window == IntPtr.Zero || GetWindowThreadProcessId(window, out var processId) == 0)
+            return null;
+        var path = ProcessPath(processId);
+        return string.Equals(Path.GetFileName(path), "ApplicationFrameHost.exe", StringComparison.OrdinalIgnoreCase)
+            ? HostedAppPath(window, processId) ?? path
+            : path;
+    }
+
+    /// <summary>The program of the first child window of <paramref name="frame"/> owned by another process, or null if there's none.</summary>
+    private static string? HostedAppPath(IntPtr frame, uint frameProcessId)
+    {
+        uint appProcessId = 0;
+        EnumChildWindows(frame, (child, _) =>
+        {
+            if (GetWindowThreadProcessId(child, out var id) == 0 || id == frameProcessId)
+                return true;
+            appProcessId = id;
+            return false;
+        }, IntPtr.Zero);
+        return appProcessId == 0 ? null : ProcessPath(appProcessId);
     }
 
     /// <summary>The full path of a process's program, or null if it can't be read.</summary>
@@ -60,6 +84,9 @@ internal static class NativeMethods
 
     [DllImport("user32.dll")]
     private static extern uint GetWindowThreadProcessId(IntPtr window, out uint processId);
+
+    [DllImport("user32.dll")]
+    private static extern bool EnumChildWindows(IntPtr parent, EnumWindowsProc callback, IntPtr parameter);
 
     [DllImport("kernel32.dll")]
     private static extern IntPtr OpenProcess(uint access, bool inheritHandle, uint processId);
