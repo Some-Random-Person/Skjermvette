@@ -196,9 +196,9 @@ public static class AuthEndpoints
 
         var result = await users.ConfirmEmailAsync(user, token);
         // A request at the same moment may have confirmed it first (#49).
-        if (!result.Succeeded && await ReloadAsync(db, user) is { EmailConfirmed: true })
-            return TypedResults.NoContent();
-        return result.Succeeded ? TypedResults.NoContent() : TypedResults.ValidationProblem(LinkErrors(result));
+        return result.Succeeded || await ReloadAsync(db, user) is { EmailConfirmed: true }
+            ? TypedResults.NoContent()
+            : TypedResults.ValidationProblem(LinkErrors(result));
     }
 
     /// <summary>
