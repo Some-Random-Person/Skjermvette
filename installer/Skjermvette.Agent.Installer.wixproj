@@ -1,0 +1,32 @@
+<Project Sdk="WixToolset.Sdk/5.0.2">
+
+  <PropertyGroup>
+    <OutputName>Skjermvette.Agent</OutputName>
+    <InstallerPlatform>x64</InstallerPlatform>
+    <Version Condition="'$(Version)' == ''">0.1.0</Version>
+    <DefineConstants>Version=$(Version)</DefineConstants>
+    <!-- ICE60: e_sqlite3.dll is native and has no language. ICE61: same-version upgrades, for test builds. -->
+    <SuppressIces>ICE60;ICE61</SuppressIces>
+    <AgentPublishDir>$(MSBuildThisFileDirectory)obj\agent\</AgentPublishDir>
+    <HelperPublishDir>$(AgentPublishDir)Helper\</HelperPublishDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="5.0.2" />
+    <PackageReference Include="WixToolset.Util.wixext" Version="5.0.2" />
+    <BindPath Include="$(AgentPublishDir)" BindName="agent" />
+    <BindPath Include="$(HelperPublishDir)" BindName="helper" />
+  </ItemGroup>
+
+  <!--
+    Both programs are published self-contained, the Helper into a Helper folder below the Service's (where the
+    Service starts it from): their copies of some runtime files differ. Always Release: a Debug Helper is a
+    console program with a window.
+  -->
+  <Target Name="PublishAgent" BeforeTargets="BeforeBuild">
+    <RemoveDir Directories="$(AgentPublishDir)" />
+    <Exec Command="dotnet publish &quot;$(MSBuildThisFileDirectory)..\src\Skjermvette.Agent.Helper&quot; -c Release -r win-x64 --self-contained -p:Version=$(Version) -o &quot;$(HelperPublishDir).&quot;" />
+    <Exec Command="dotnet publish &quot;$(MSBuildThisFileDirectory)..\src\Skjermvette.Agent.Service&quot; -c Release -r win-x64 --self-contained -p:Version=$(Version) -o &quot;$(AgentPublishDir).&quot;" />
+  </Target>
+
+</Project>

@@ -1,0 +1,62 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Fragment>
+    <!-- WixUI's standard dialogs, with PairDlg between Welcome and Ready to install. -->
+    <UI Id="SkjermvetteUI">
+      <TextStyle Id="WixUI_Font_Normal" FaceName="Tahoma" Size="8" />
+      <TextStyle Id="WixUI_Font_Bigger" FaceName="Tahoma" Size="12" />
+      <TextStyle Id="WixUI_Font_Title" FaceName="Tahoma" Size="9" Bold="yes" />
+      <Property Id="DefaultUIFont" Value="WixUI_Font_Normal" />
+      <Property Id="ARPNOMODIFY" Value="1" />
+
+      <DialogRef Id="ErrorDlg" />
+      <DialogRef Id="FatalError" />
+      <DialogRef Id="FilesInUse" />
+      <DialogRef Id="MsiRMFilesInUse" />
+      <DialogRef Id="PrepareDlg" />
+      <DialogRef Id="ProgressDlg" />
+      <DialogRef Id="ResumeDlg" />
+      <DialogRef Id="UserExit" />
+
+      <!-- A failed pairing is the only program that can fail the install, so its error says what to do. -->
+      <Error Id="1722" Message="Pairing didn't work. Check the server address (e.g. https://skjermvette.example.com), that the server is running, and that the code is new: codes last 10 minutes. Then run the installer again. If this computer was paired before, run &quot;Skjermvette.Agent.Service.exe forget&quot; as an administrator first." />
+
+      <Publish Dialog="ExitDialog" Control="Finish" Event="EndDialog" Value="Return" Order="999" />
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="PairDlg" Condition="NOT Installed AND NOT WIX_UPGRADE_DETECTED" />
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Condition="WIX_UPGRADE_DETECTED" />
+      <Publish Dialog="PairDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" />
+      <Publish Dialog="PairDlg" Control="Next" Event="NewDialog" Value="VerifyReadyDlg" Condition="SERVER AND PAIRCODE" />
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="PairDlg" Order="1" Condition="NOT Installed AND NOT WIX_UPGRADE_DETECTED" />
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="2" Condition="WIX_UPGRADE_DETECTED" />
+      <Publish Dialog="VerifyReadyDlg" Control="Back" Event="NewDialog" Value="MaintenanceTypeDlg" Order="3" Condition="Installed" />
+      <Publish Dialog="MaintenanceWelcomeDlg" Control="Next" Event="NewDialog" Value="MaintenanceTypeDlg" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RepairButton" Event="NewDialog" Value="VerifyReadyDlg" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="RemoveButton" Event="NewDialog" Value="VerifyReadyDlg" />
+      <Publish Dialog="MaintenanceTypeDlg" Control="Back" Event="NewDialog" Value="MaintenanceWelcomeDlg" />
+
+      <Dialog Id="PairDlg" Width="370" Height="270" Title="[ProductName] Setup">
+        <Control Id="BannerBitmap" Type="Bitmap" X="0" Y="0" Width="370" Height="44" TabSkip="no" Text="WixUI_Bmp_Banner" />
+        <Control Id="BannerLine" Type="Line" X="0" Y="44" Width="370" Height="0" />
+        <Control Id="Title" Type="Text" X="15" Y="6" Width="200" Height="15" Transparent="yes" NoPrefix="yes"
+                 Text="{\WixUI_Font_Title}Pair this computer" />
+        <Control Id="Description" Type="Text" X="25" Y="23" Width="280" Height="15" Transparent="yes" NoPrefix="yes"
+                 Text="Connect it to your Skjermvette server and to a child." />
+
+        <Control Id="ServerLabel" Type="Text" X="20" Y="60" Width="330" Height="10" Text="&amp;Server address:" />
+        <Control Id="Server" Type="Edit" X="20" Y="72" Width="330" Height="18" Property="SERVER" Text="{200}" />
+        <Control Id="CodeLabel" Type="Text" X="20" Y="102" Width="330" Height="10" Text="Pairing &amp;code:" />
+        <Control Id="Code" Type="Edit" X="20" Y="114" Width="80" Height="18" Property="PAIRCODE" Text="{6}" />
+        <Control Id="Help" Type="Text" X="20" Y="142" Width="330" Height="60" NoPrefix="yes"
+                 Text="In the dashboard, open the child's Devices tab and create a pairing code. It lasts 10 minutes. Fill in both to continue.&#xD;&#xA;&#xD;&#xA;This computer will count the child's screen time and close programs whose time is up. The child should use a standard (non-administrator) account." />
+
+        <Control Id="BottomLine" Type="Line" X="0" Y="234" Width="370" Height="0" />
+        <Control Id="Back" Type="PushButton" X="180" Y="243" Width="56" Height="17" Text="!(loc.WixUIBack)" />
+        <Control Id="Next" Type="PushButton" X="236" Y="243" Width="56" Height="17" Default="yes" Text="!(loc.WixUINext)" />
+        <Control Id="Cancel" Type="PushButton" X="304" Y="243" Width="56" Height="17" Cancel="yes" Text="!(loc.WixUICancel)">
+          <Publish Event="SpawnDialog" Value="CancelDlg" />
+        </Control>
+      </Dialog>
+    </UI>
+
+    <UIRef Id="WixUI_Common" />
+  </Fragment>
+</Wix>

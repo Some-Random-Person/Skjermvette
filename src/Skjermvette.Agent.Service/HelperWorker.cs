@@ -12,11 +12,14 @@ public sealed class HelperWorker(IConfiguration configuration, HelperProcess run
 {
     public static readonly TimeSpan Interval = TimeSpan.FromSeconds(1);
 
-    /// <summary><c>Agent:HelperPath</c> from configuration, or the Helper next to the service.</summary>
+    /// <summary>
+    /// <c>Agent:HelperPath</c> from configuration, or the Helper in a <c>Helper</c> folder next to the service. Its own
+    /// folder: published self-contained (as the installer does), their copies of some runtime files differ.
+    /// </summary>
     public static string HelperPath(IConfiguration configuration) =>
         configuration["Agent:HelperPath"] is { Length: > 0 } path
             ? Environment.ExpandEnvironmentVariables(path)
-            : Path.Combine(AppContext.BaseDirectory, "Skjermvette.Agent.Helper.exe");
+            : Path.Combine(AppContext.BaseDirectory, "Helper", "Skjermvette.Agent.Helper.exe");
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
