@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Skjermvette.Server.Auth;
@@ -25,11 +26,30 @@ builder.Services.AddDbContext<AppDbContext>(options => _ = provider switch
     _ => throw new InvalidOperationException($"Unknown Database__Provider \"{provider}\". Use Sqlite or Postgres."),
 });
 
+// Behind the Cloudflare Tunnel: the client's address comes in CF-Connecting-IP and the original scheme in
+// X-Forwarded-Proto. They're trusted only from App__ProxyNetwork (the Docker network the tunnel's requests
+// arrive from), or from localhost when it isn't set.
+var proxyNetworkSetting = builder.Configuration["App:ProxyNetwork"];
+System.Net.IPNetwork? proxyNetwork = string.IsNullOrWhiteSpace(proxyNetworkSetting) ? null
+    : System.Net.IPNetwork.TryParse(proxyNetworkSetting, out var network) ? network
+    : throw new InvalidOperationException($"Invalid configuration: App__ProxyNetwork \"{proxyNetworkSetting}\" (e.g. 172.30.80.0/24).");
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.ForwardedForHeaderName = "CF-Connecting-IP";
+    if (proxyNetwork is { } known)
+        options.KnownIPNetworks.Add(known);
+});
+
+// TLS ends at Cloudflare, so the server sees plain HTTP. Outside development the cookies are sent over HTTPS only.
+var cookieSecurity = builder.Environment.IsDevelopment() ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
+
 builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
     .AddCookie(IdentityConstants.ApplicationScheme, options =>
     {
         options.Cookie.Name = "skjermvette.auth";
         options.Cookie.HttpOnly = true;
+        options.Cookie.SecurePolicy = cookieSecurity;
         options.Cookie.SameSite = SameSiteMode.Strict;
         options.ExpireTimeSpan = TimeSpan.FromDays(30);
         options.SlidingExpiration = true;
@@ -45,6 +65,7 @@ builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
     {
         options.Cookie.Name = "skjermvette.2fa";
         options.Cookie.HttpOnly = true;
+        options.Cookie.SecurePolicy = cookieSecurity;
         options.Cookie.SameSite = SameSiteMode.Strict;
         options.ExpireTimeSpan = ParentSession.SecondStepLifespan;
     })
@@ -53,6 +74,7 @@ builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
     {
         options.Cookie.Name = "skjermvette.remember";
         options.Cookie.HttpOnly = true;
+        options.Cookie.SecurePolicy = cookieSecurity;
         options.Cookie.SameSite = SameSiteMode.Strict;
         options.ExpireTimeSpan = ParentSession.RememberBrowserLifespan;
         options.Events.OnValidatePrincipal = SecurityStampValidator.ValidateAsync<ITwoFactorSecurityStampValidator>;
@@ -151,6 +173,7 @@ using (var scope = app.Services.CreateScope())
         await db.Database.EnsureCreatedAsync();
 }
 
+app.UseForwardedHeaders();
 app.UseExceptionHandler(new ExceptionHandlerOptions
 {
     // Malformed requests (e.g. invalid JSON) are the client's fault: 400, not 500.

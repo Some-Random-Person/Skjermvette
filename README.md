@@ -66,7 +66,7 @@ Child devices ──HTTPS + SignalR (device token)──────┘
 | `tests/` | xUnit tests for Core, the server and the Windows agent | Done |
 | `tools/FakeDevice` | Pretends to be a phone or PC, for testing across devices | Done |
 | `extension/` | Chrome/Edge (Manifest V3) extension | Not started |
-| `deploy/` | `docker-compose.yml` (server, Postgres) for self-hosting behind a Cloudflare Tunnel | Not started |
+| `deploy/` | `docker-compose.yml` (server, Postgres) for self-hosting behind a Cloudflare Tunnel | Written, not yet run on a real server |
 
 [docs/plan.md](docs/plan.md) has the detailed status, and [docs/product.md](docs/product.md) the full product rules.
 
@@ -80,20 +80,72 @@ Child devices ──HTTPS + SignalR (device token)──────┘
 
 ## Installation
 
-> **Not ready for real use yet.** There's no installer, no Docker setup and no browser extension, so websites aren't counted or blocked on Windows. The steps below are how the parts are run today, for testing. To try everything on one computer, follow [Development](#development) instead.
+> **Not ready for real use yet.** There's no installer for the Windows agent and no browser extension yet, so websites aren't counted or blocked on Windows. The steps below are how the parts are run today, for testing. To try everything on one computer, follow [Development](#development) instead.
 
 ### Server and dashboard
 
-The server is one ASP.NET Core app that also serves the dashboard. In production it uses Postgres (17 is the planned version) and sits behind a Cloudflare Tunnel, so it doesn't handle HTTPS itself.
+The server is one ASP.NET Core app that also serves the dashboard. It runs in Docker with Postgres 17 and sits behind a [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/), so it doesn't handle HTTPS itself.
+
+> The Docker files in `deploy/` haven't been run on a real server yet (they were written on a computer without Docker). Expect rough edges, and please open an issue if something doesn't work.
 
 You need:
 
-- the [ASP.NET Core Runtime 10.0.13 or later](https://dotnet.microsoft.com/download/dotnet/10.0) (earlier 10.0 versions have security holes, #39);
-- a Postgres database, with a user that can create tables;
-- an SMTP account for sending emails (sign-in codes, confirmations, password resets);
-- a public HTTPS address for parents and devices, e.g. through a [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) (`cloudflared` on the host).
+- a Linux computer with [Docker](https://docs.docker.com/engine/install/) and Docker Compose;
+- a domain on Cloudflare, and `cloudflared` installed on the same computer;
+- an SMTP account for sending emails (sign-in codes, confirmations, password resets).
 
-**1. Build** with the .NET SDK 10 and Node.js 22 or newer. Build the dashboard first, so it's included in the server:
+**1. Get the code:**
+
+```bash
+git clone https://github.com/Some-Random-Person/Skjermvette.git
+```
+
+Run the commands below from the `Skjermvette` folder it creates.
+
+**2. Configure.** Copy [`deploy/.env.example`](deploy/.env.example) to `deploy/.env` and fill it in. The server stops at startup with a clear message if something is missing.
+
+| Variable | What it is |
+|---|---|
+| `POSTGRES_PASSWORD` | The database password. Letters and digits only, e.g. from `openssl rand -hex 32`. |
+| `App__PublicUrl` | The address parents open, e.g. `https://skjermvette.example.com`. Every link in an email starts with it. |
+| `Email__From` | The sender, e.g. `Skjermvette <skjermvette@example.com>` |
+| `Email__Smtp__Host`, `Email__Smtp__Port`, `Email__Smtp__User`, `Email__Smtp__Password` | Your SMTP server. Port 465 uses TLS from the start; any other port (e.g. 587) must support STARTTLS. |
+
+**3. Start** the server and database. The database tables are created and updated automatically. The server listens on `127.0.0.1:8080`, so only programs on the same computer can reach it.
+
+```bash
+docker compose -f deploy/docker-compose.yml up -d --build
+```
+
+**4. Connect the tunnel.** In Cloudflare, create a tunnel with a public hostname for your address and the service `http://127.0.0.1:8080` (not `localhost`, which can mean the IPv6 address the server doesn't listen on). Turn on **Always Use HTTPS** for the domain: sign-in cookies only work over HTTPS.
+
+**5. Create an account** at your public address: register, open the confirmation link in the email, then sign in. Every sign-in needs a second step: a code by email, or from an authenticator app you can turn on under Settings → Security.
+
+**Updating:** get the new code with `git pull`, then rebuild (`--pull` also fetches .NET security fixes) and restart:
+
+```bash
+docker compose -f deploy/docker-compose.yml build --pull
+```
+
+```bash
+docker compose -f deploy/docker-compose.yml up -d
+```
+
+**Backups:** the database is in the `db` volume. To save a copy:
+
+```bash
+docker compose -f deploy/docker-compose.yml exec -T db pg_dump -U skjermvette skjermvette > skjermvette-backup.sql
+```
+
+Things to know:
+
+- **Backups keep deleted accounts.** Deleting an account removes it from the database, but not from backups taken before (#31). Tell parents how long you keep backups.
+- **The `keys` volume** holds the keys that protect sign-in cookies and email links. If it's lost, everyone is signed out and links already sent stop working; nothing else is lost.
+- **Visitors' addresses** come from Cloudflare (`CF-Connecting-IP`). The limits on sending emails and on pairing attempts are per address. They're only trusted from the Docker network in `docker-compose.yml` (`172.30.80.0/24`; change it there if it clashes with another network). To check that it works, add `Logging__LogLevel__Microsoft.AspNetCore.HttpOverrides=Debug` to `.env`, run the `up -d` command again, sign in, and look for `Unknown proxy` in `docker compose -f deploy/docker-compose.yml logs server`. There should be none.
+
+#### Without Docker
+
+Build with the .NET SDK 10 and Node.js 22 or newer. Build the dashboard first, so it's included in the server:
 
 ```bash
 npm ci --prefix web
@@ -107,30 +159,19 @@ npm run build --prefix web
 dotnet publish src/Skjermvette.Server -c Release -o publish/server
 ```
 
-**2. Configure** with environment variables. [`.env.example`](.env.example) lists them all with examples. The server stops at startup with a clear message if one is missing.
+Run it with the [ASP.NET Core Runtime 10.0.13 or later](https://dotnet.microsoft.com/download/dotnet/10.0) (earlier 10.0 versions have security holes, #39) and a Postgres database whose user can create tables. Set the variables above (except `POSTGRES_PASSWORD`) in the server's environment, plus:
 
 | Variable | What it is |
 |---|---|
 | `Database__Provider` | `Postgres` (or `Sqlite` for a quick test) |
 | `ConnectionStrings__DefaultConnection` | How to reach the database, e.g. `Host=localhost;Database=skjermvette;Username=skjermvette;Password=…` |
-| `App__PublicUrl` | The address parents open, e.g. `https://skjermvette.example.com`. Every link in an email starts with it. |
-| `Email__From` | The sender, e.g. `Skjermvette <skjermvette@example.com>` |
-| `Email__Smtp__Host`, `Email__Smtp__Port`, `Email__Smtp__User`, `Email__Smtp__Password` | Your SMTP server. Port 465 uses TLS from the start; any other port (e.g. 587) must support STARTTLS. |
+| `App__ProxyNetwork` | Only if `cloudflared` runs on another computer: the network it connects from, e.g. `192.168.1.0/24`. On the same computer it's trusted already. |
 
-A `.env` file is only read by Docker Compose (once `deploy/` exists). When you run the server directly, set the variables in its environment.
-
-**3. Run.** The database tables are created and updated automatically at startup. Listen on the local machine only, and let the tunnel forward to it:
+Listen on the local machine only, and let the tunnel forward to it:
 
 ```bash
 ASPNETCORE_URLS=http://127.0.0.1:8080 dotnet publish/server/Skjermvette.Server.dll
 ```
-
-**4. Create an account** at your public address: register, open the confirmation link in the email, then sign in. Every sign-in needs a second step: a code by email, or from an authenticator app you can turn on under Settings → Security.
-
-Things to know:
-
-- **Behind the tunnel, every visitor looks like the same address** until #6 is done. The limits on sending emails and on pairing attempts are then shared by everybody.
-- **Backups keep deleted accounts.** Deleting an account removes it from the database, but not from backups taken before (#31). Tell parents how long you keep backups.
 
 ### Windows agent (for testing)
 

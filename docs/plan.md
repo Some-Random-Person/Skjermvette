@@ -32,7 +32,7 @@ In production the server runs in Docker with Postgres, behind a **Cloudflare Tun
 | 4 | **Windows agent**: Service + Helper | **In progress.** Done: the Service's sync loop (pairing, token, outbox, offline allowance, live updates, unpairing); the Helper's foreground, audio and idle tracking, sent to the Service over a named pipe; enforcement: warnings at 5 and 1 min, closing programs in use whose time is up, and the full-screen notice; the Service starting the Helper in the signed-in user's session and restarting it, at High integrity so the child can't close it, with the pipe taking samples only from that Helper (#60; tried installed as SYSTEM). Installing by hand for testing is in the README. Next: an installer. Browser policies wait for the extension (step 5) |
 | 5 | **Browser extension** + native messaging host registration | To do |
 | 6 | Parent dashboard | Done, moved ahead of 4–5 (#9, then #12, #13, #24, #25, #26) |
-| 7 | **Deploy files** (`deploy/docker-compose.yml`, self-hosting README) | To do, together with #6 (forwarded headers behind the tunnel). The README must say that database backups keep data from deleted accounts (#31). The server image must use ASP.NET Core runtime 10.0.13 or later (security fixes, #39) |
+| 7 | **Deploy files** (`deploy/docker-compose.yml`, self-hosting README) | Done with #6 (forwarded headers and `Secure` cookies behind the tunnel), but **not yet run**: the dev machine has no Docker. Check on the real server that it builds and starts, and that the client address arrives (README → Server and dashboard) |
 
 **Not built yet** (from the original plan): per-weekday rules in the rules editor.
 
@@ -72,7 +72,6 @@ In production the server runs in Docker with Postgres, behind a **Cloudflare Tun
   - Reports the active tab's domain, window focus and audible tabs to the Helper.
   - Blocks used-up domains with `declarativeNetRequest` dynamic redirect rules to a local "blocked" page.
   - **Fails closed:** if native messaging isn't working, it blocks everything except an allowlist.
-- `deploy/`: `docker-compose.yml` (server + Postgres 17; server port on `127.0.0.1` only; `cloudflared` on the host) and a self-hosting README. Written but not run on the dev machine, since it has no Docker.
 
 ## Rules the agents must follow
 These are implemented on the server and in Core; an agent only has to report and enforce correctly.
