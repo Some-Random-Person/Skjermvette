@@ -185,7 +185,7 @@ public static class AuthEndpoints
 
     /// <summary>Confirms a parent's email address with the token from the link in the confirmation email.</summary>
     private static async Task<Results<NoContent, ValidationProblem>> ConfirmEmailAsync(
-        ConfirmEmailRequest request, UserManager<ParentUser> users)
+        ConfirmEmailRequest request, UserManager<ParentUser> users, AppDbContext db)
     {
         var user = await users.FindByIdAsync(request.UserId.ToString());
         if (user is null || AccountEmails.DecodeToken(request.Token) is not { } token)
@@ -195,6 +195,9 @@ public static class AuthEndpoints
             return TypedResults.NoContent();
 
         var result = await users.ConfirmEmailAsync(user, token);
+        // A request at the same moment may have confirmed it first (#49).
+        if (!result.Succeeded && await ReloadAsync(db, user) is { EmailConfirmed: true })
+            return TypedResults.NoContent();
         return result.Succeeded ? TypedResults.NoContent() : TypedResults.ValidationProblem(LinkErrors(result));
     }
 
@@ -203,7 +206,8 @@ public static class AuthEndpoints
     /// are signed out; if this browser is signed in as the same parent, it stays signed in.
     /// </summary>
     private static async Task<Results<NoContent, ValidationProblem>> ConfirmEmailChangeAsync(
-        ConfirmEmailChangeRequest request, ClaimsPrincipal principal, UserManager<ParentUser> users, SignInManager<ParentUser> signIn)
+        ConfirmEmailChangeRequest request, ClaimsPrincipal principal, UserManager<ParentUser> users, SignInManager<ParentUser> signIn,
+        AppDbContext db)
     {
         var user = await users.FindByIdAsync(request.UserId.ToString());
         if (user is null || AccountEmails.DecodeToken(request.Token) is not { } token)
@@ -218,11 +222,23 @@ public static class AuthEndpoints
         if (result.Succeeded)
             result = await users.SetUserNameAsync(user, email);
         if (!result.Succeeded)
+        {
+            // A request at the same moment may have changed it first (#49).
+            if (await ReloadAsync(db, user) is { } current && current.NormalizedEmail == users.NormalizeEmail(email))
+                return TypedResults.NoContent();
             return TypedResults.ValidationProblem(LinkErrors(result));
+        }
 
         if (users.GetUserId(principal) == user.Id.ToString())
             await ParentSession.SignInAsync(signIn, user);
         return TypedResults.NoContent();
+    }
+
+    /// <summary>The user as saved now, after a failed update left the tracked copy stale.</summary>
+    private static async Task<ParentUser> ReloadAsync(AppDbContext db, ParentUser user)
+    {
+        await db.Entry(user).ReloadAsync();
+        return user;
     }
 
     /// <summary>

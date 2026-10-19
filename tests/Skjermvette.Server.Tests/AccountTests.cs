@@ -69,6 +69,21 @@ public class AccountTests
     }
 
     [Fact]
+    public async Task EmailChange_LinkOpenedTwiceAtOnce_SucceedsBothTimes()
+    {
+        using var factory = new ServerFactory();
+        var parent = await factory.CreateParentAsync("ada@example.com");
+        (await parent.PutAsJsonAsync("/api/account/email", new ChangeEmailRequest("ada.new@example.com", Password), Json)).EnsureSuccessStatusCode();
+        var link = LinkIn(Assert.Single(await factory.WaitForEmailsAsync("ada.new@example.com"))).Query;
+        var request = new ConfirmEmailChangeRequest(Guid.Parse(link["userId"]), link["email"], link["token"]);
+
+        var responses = await Task.WhenAll(Enumerable.Range(0, 4).Select(_ =>
+            factory.CreateClient().PostAsJsonAsync("/api/auth/confirm-email-change", request, Json)));
+
+        Assert.All(responses, r => Assert.Equal(HttpStatusCode.NoContent, r.StatusCode));
+    }
+
+    [Fact]
     public async Task EmailChange_ToAnAddressTakenBeforeItsConfirmed_IsRejected()
     {
         using var factory = new ServerFactory();
