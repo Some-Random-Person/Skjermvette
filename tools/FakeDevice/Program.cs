@@ -1,9 +1,9 @@
 using FakeDevice;
-using ScreenTime.Core.DeviceApi;
-using ScreenTime.Core.Models;
+using Skjermvette.Core.DeviceApi;
+using Skjermvette.Core.Models;
 
 const string Help = """
-    Fake device for ScreenTime: pairs like a real device and reports made-up usage.
+    Fake device for Skjermvette: pairs like a real device and reports made-up usage.
 
     Usage:
       pair <code> --name <name> [--platform Windows|Android|Ios|MacOs|Linux] [--server <url>]
@@ -94,7 +94,7 @@ static async Task<int> LiveAsync(string name, MatcherKindEnum kind, string ident
     var device = await DeviceStore.LoadAsync(name);
     using var client = new DeviceClient(device);
     var state = await client.StateAsync();
-    var app = new ScreenTime.Core.AppResolver(state.Catalog).Resolve(kind, identifier);
+    var app = new Skjermvette.Core.AppResolver(state.Catalog).Resolve(kind, identifier);
     Console.WriteLine($"Using {identifier} ({app?.Name ?? "not a known app; counts toward the total"}) on \"{device.Name}\". Ctrl+C to stop.");
 
     await using var hub = await client.ConnectAsync(snapshot =>

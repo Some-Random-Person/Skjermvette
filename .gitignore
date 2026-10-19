@@ -26,7 +26,7 @@ yarn-error.log*
 pnpm-debug.log*
 
 # Built dashboard copied into the server
-src/ScreenTime.Server/wwwroot/
+src/Skjermvette.Server/wwwroot/
 
 # Packed browser extension builds
 *.crx
@@ -39,7 +39,7 @@ src/ScreenTime.Server/wwwroot/
 *.db-wal
 *.sqlite
 # Emails the development server writes instead of sending
-src/ScreenTime.Server/emails/
+src/Skjermvette.Server/emails/
 .env
 .env.*
 !.env.example

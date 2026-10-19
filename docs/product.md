@@ -1,6 +1,6 @@
 # Product rules
 
-How ScreenTimeManagement behaves, in detail. Read this before changing anything that affects how time is counted, limited or blocked. The short version is at the top of `CLAUDE.md`; the build status is in [plan.md](plan.md).
+How Skjermvette behaves, in detail. Read this before changing anything that affects how time is counted, limited or blocked. The short version is at the top of `CLAUDE.md`; the build status is in [plan.md](plan.md).
 
 ## What it is
 - A parental screen-time manager that enforces **one shared daily budget across all of a child's devices**. Switching device doesn't get around the limits.

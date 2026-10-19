@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Skjermvette.Agent.Helper/Skjermvette.Agent.Helper.csproj" />
+    <Project Path="src/Skjermvette.Agent.Service/Skjermvette.Agent.Service.csproj" />
+    <Project Path="src/Skjermvette.Core/Skjermvette.Core.csproj" />
+    <Project Path="src/Skjermvette.Server/Skjermvette.Server.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Skjermvette.Agent.Tests/Skjermvette.Agent.Tests.csproj" />
+    <Project Path="tests/Skjermvette.Core.Tests/Skjermvette.Core.Tests.csproj" />
+    <Project Path="tests/Skjermvette.Server.Tests/Skjermvette.Server.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/FakeDevice/FakeDevice.csproj" />
+  </Folder>
+</Solution>
