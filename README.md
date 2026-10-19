@@ -293,6 +293,46 @@ dotnet run --project src/Skjermvette.Agent.Helper
 
 Stop both with Ctrl+C. To pair again, run `dotnet run --project src/Skjermvette.Agent.Service -- forget` and unpair the old device in the dashboard.
 
+## How AI is used in this project
+
+I build Skjermvette on my own, working with an AI coding agent, [Claude Code](https://claude.com/claude-code) (Anthropic's Claude Opus 5.5). **I decide what gets built and how the product behaves; Claude writes most of the code, tests and documentation**, and opens and merges the pull requests once the checks pass.
+
+**The app itself contains no AI.** Nothing a child does, and nothing a parent enters, is sent to an AI service, or anywhere other than your own server.
+
+### Who does what
+
+| | Me | Claude |
+|---|---|---|
+| Product rules (how time counts, the offline allowance, privacy) | Decide | Asks when something is unclear, points out trade-offs and risks |
+| Code, tests and docs | Give the instructions, review the result | Writes them, following the project's written rules |
+| Pull requests | Review before or after merging, depending on the size of the PR | Opens them, reviews its own change, merges once builds and tests pass |
+| New dependencies | Approve each one | Asks first; can't add any on its own |
+| Running the agent on a real computer | Approve every run | Never starts it without my go-ahead |
+
+### How it's kept in check
+
+- **Written rules.** [`CLAUDE.md`](CLAUDE.md) and one `CLAUDE.md` per area (server, agent, dashboard) hold the conventions, decisions and pitfalls. Claude reads them at the start of every task, and they're updated whenever a decision is made.
+- **Every change is a pull request** with a description of what changed, why, and what's uncertain. Nothing is pushed straight to `main`.
+- **Tests must pass** before merging: `dotnet test Skjermvette.slnx` and the dashboard's type, lint and format checks. Dashboard changes are also clicked through in a browser against the real server.
+- **It's visible in the history.** Every commit Claude wrote ends with `Co-Authored-By: Claude`, so `git log` shows exactly which ones.
+- **Security-sensitive parts** (passwords, two-factor sign-in, keeping the child from stopping the agent) are written against published guidance (OWASP, NIST) and covered by tests. Protections that only work as SYSTEM were also tried by hand on a real Windows machine.
+- **Mistakes become rules.** When an early test run of the agent closed every program on my computer (2026-10-16), the product rule "a computer that has never reached the server blocks nothing" was added, and test runs now need my own tools exempt first.
+
+### In numbers (2026-10-12 to 2026-10-19)
+
+| | |
+|---|---|
+| Commits | 65, of which 64 co-written by Claude |
+| Merged pull requests | 44 |
+| Issues | 21 |
+| Test files | 32 |
+
+### What this means for you
+
+- I stand behind and am responsible for every release, no matter who or what wrote the code.
+- Found a bug? Open an issue. It's treated the same whether the code came from me or from Claude.
+- Outside contributors may use AI tools, as long as they mark it the same way. I won't hold anyone to a higher standard than I hold myself. You're still responsible for the code you submit, no matter who or what wrote it.
+
 ## Contributing
 
 - Work on feature branches: `feat/<name>`, `docs/<name>` or `fix/<issue>-<name>`. Never commit directly to `main`.
