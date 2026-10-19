@@ -55,6 +55,21 @@ public class AccountEmailTests
     }
 
     [Fact]
+    public async Task ConfirmEmail_OpenedTwiceAtOnce_SucceedsBothTimes()
+    {
+        using var factory = new ServerFactory();
+        await RegisterAsync(factory);
+        var query = LinkIn(Assert.Single(await factory.WaitForEmailsAsync(Email))).Query;
+        var request = new ConfirmEmailRequest(Guid.Parse(query["userId"]), query["token"]);
+
+        var responses = await Task.WhenAll(Enumerable.Range(0, 4).Select(_ =>
+            factory.CreateClient().PostAsJsonAsync("/api/auth/confirm-email", request, Json)));
+
+        Assert.All(responses, r => Assert.Equal(HttpStatusCode.NoContent, r.StatusCode));
+        Assert.Equal(HttpStatusCode.OK, (await LoginAsync(factory)).StatusCode);
+    }
+
+    [Fact]
     public async Task Register_WithATakenAddress_RepliesTheSame_AndEmailsTheOwner()
     {
         using var factory = new ServerFactory();
