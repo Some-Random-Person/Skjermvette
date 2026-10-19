@@ -55,7 +55,7 @@ Loaded when working in `src/ScreenTime.Agent.Service/`. General rules and the C#
   - one that keeps stopping sooner, or can't be started, is retried after 1 s, doubling up to 30 s;
   - when another user signs in at the console, the old Helper is closed and one is started for the new user. While the session is switching (nobody at the console), it's left running.
 - Before starting, any Helper already in that session (left from before, or started by hand) is closed, so there's one per session. The Helper is closed when the service stops.
-- **Not tried as SYSTEM yet** (#60): the High integrity Helper (that it starts, tracks and shows notices, and that the child can't close it from Task Manager or `taskkill`), the cleaned environment, and the pipe refusing other programs.
+- **Tried as SYSTEM** (#60, 2026-10-19): the Helper runs at High (0x3000) and still tracks and shows both notices; `taskkill /F` and `Stop-Process` from the user's Medium shell get "Access is denied"; a program of the user's connecting to the pipe is disconnected within about 0.5 s (logged as a warning) while the Helper keeps counting. The cleaned environment wasn't tried with a hostile variable.
 - **Tried as SYSTEM** (installed by hand, 2026-10-16): starting the Helper in the user's session, it connecting to the pipe, switching to another user (old Helper closed, new one started), restarting it after a kill (0.2 s after a long run, 2 s after a quick one) and closing it when the service stops.
 
 ## Tests (`tests/ScreenTime.Agent.Tests`)
