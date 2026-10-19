@@ -2,7 +2,7 @@
 
 Parental screen-time control that works **across all of a child's devices**. One daily budget is shared by the phone, tablet and computer, so switching devices doesn't get around the limits.
 
-> **Status:** early development. The design is settled and the code is being built in phases (see [Roadmap](#roadmap)). Nothing in this repository is ready to install on a child's device yet.
+> **Status:** early development. The design is settled and the code is being built in phases (see [Roadmap](#roadmap)). The server, dashboard and most of the Windows agent work, but nothing is ready to install on a child's device yet (see [Installation](#installation)).
 
 ## What it does
 
@@ -54,19 +54,21 @@ Child devices ──HTTPS + SignalR (device token)──────┘
 - **Browser extension:** tells the agent which site is active and blocks sites whose time is up.
 - **Dashboard:** the web app parents use to manage children, devices and rules, and to watch today's usage.
 
-## Planned repository layout
+## Repository layout
 
-| Path | Contents |
-|---|---|
-| `src/Skjermvette.Core` | Platform-neutral rules: budget calculation, app matching, day boundaries |
-| `src/Skjermvette.Server` | Self-hosted API, SignalR hub and database |
-| `src/Skjermvette.Agent.Service` | Windows service: sync, enforcement, browser policies |
-| `src/Skjermvette.Agent.Helper` | Windows helper in the child's session: tracking, block overlay, tray |
-| `extension/` | Chrome/Edge (Manifest V3) extension |
-| `web/` | Parent dashboard (React + Vite) |
-| `tests/` | xUnit tests for Core and Server |
-| `tools/FakeDevice` | Simulates a second device for testing across devices |
-| `deploy/` | `docker-compose.yml` (server, Postgres) for self-hosting, exposed through a Cloudflare Tunnel |
+| Path | Contents | Status |
+|---|---|---|
+| `src/Skjermvette.Core` | Platform-neutral rules: budget calculation, app matching, day boundaries | Done |
+| `src/Skjermvette.Server` | Self-hosted API, SignalR hub and database; also serves the dashboard | Done |
+| `web/` | Parent dashboard (React + Vite) | Done |
+| `src/Skjermvette.Agent.Service` | Windows service: sync, offline allowance, closing programs, starting the Helper | Mostly done; browser policies to do |
+| `src/Skjermvette.Agent.Helper` | Windows helper in the child's session: tracking, warnings and the "time's up" notice | Mostly done; tray icon and browser link to do |
+| `tests/` | xUnit tests for Core, the server and the Windows agent | Done |
+| `tools/FakeDevice` | Pretends to be a phone or PC, for testing across devices | Done |
+| `extension/` | Chrome/Edge (Manifest V3) extension | Not started |
+| `deploy/` | `docker-compose.yml` (server, Postgres) for self-hosting behind a Cloudflare Tunnel | Not started |
+
+[docs/plan.md](docs/plan.md) has the detailed status, and [docs/product.md](docs/product.md) the full product rules.
 
 ## Roadmap
 
@@ -76,23 +78,164 @@ Child devices ──HTTPS + SignalR (device token)──────┘
 4. **macOS:** native agent + Safari extension.
 5. **Linux:** X11 first; Wayland through a GNOME/KDE extension.
 
+## Installation
+
+> **Not ready for real use yet.** There's no installer, no Docker setup and no browser extension, so websites aren't counted or blocked on Windows. The steps below are how the parts are run today, for testing. To try everything on one computer, follow [Development](#development) instead.
+
+### Server and dashboard
+
+The server is one ASP.NET Core app that also serves the dashboard. In production it uses Postgres (17 is the planned version) and sits behind a Cloudflare Tunnel, so it doesn't handle HTTPS itself.
+
+You need:
+
+- the [ASP.NET Core Runtime 10.0.13 or later](https://dotnet.microsoft.com/download/dotnet/10.0) (earlier 10.0 versions have security holes, #39);
+- a Postgres database, with a user that can create tables;
+- an SMTP account for sending emails (sign-in codes, confirmations, password resets);
+- a public HTTPS address for parents and devices, e.g. through a [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) (`cloudflared` on the host).
+
+**1. Build** with the .NET SDK 10 and Node.js 22 or newer. Build the dashboard first, so it's included in the server:
+
+```bash
+npm ci --prefix web
+```
+
+```bash
+npm run build --prefix web
+```
+
+```bash
+dotnet publish src/Skjermvette.Server -c Release -o publish/server
+```
+
+**2. Configure** with environment variables. [`.env.example`](.env.example) lists them all with examples. The server stops at startup with a clear message if one is missing.
+
+| Variable | What it is |
+|---|---|
+| `Database__Provider` | `Postgres` (or `Sqlite` for a quick test) |
+| `ConnectionStrings__DefaultConnection` | How to reach the database, e.g. `Host=localhost;Database=skjermvette;Username=skjermvette;Password=…` |
+| `App__PublicUrl` | The address parents open, e.g. `https://skjermvette.example.com`. Every link in an email starts with it. |
+| `Email__From` | The sender, e.g. `Skjermvette <skjermvette@example.com>` |
+| `Email__Smtp__Host`, `Email__Smtp__Port`, `Email__Smtp__User`, `Email__Smtp__Password` | Your SMTP server. Port 465 uses TLS from the start; any other port (e.g. 587) must support STARTTLS. |
+
+A `.env` file is only read by Docker Compose (once `deploy/` exists). When you run the server directly, set the variables in its environment.
+
+**3. Run.** The database tables are created and updated automatically at startup. Listen on the local machine only, and let the tunnel forward to it:
+
+```bash
+ASPNETCORE_URLS=http://127.0.0.1:8080 dotnet publish/server/Skjermvette.Server.dll
+```
+
+**4. Create an account** at your public address: register, open the confirmation link in the email, then sign in. Every sign-in needs a second step: a code by email, or from an authenticator app you can turn on under Settings → Security.
+
+Things to know:
+
+- **Behind the tunnel, every visitor looks like the same address** until #6 is done. The limits on sending emails and on pairing attempts are then shared by everybody.
+- **Backups keep deleted accounts.** Deleting an account removes it from the database, but not from backups taken before (#31). Tell parents how long you keep backups.
+
+### Windows agent (for testing)
+
+The agent is two programs: a **Service** that runs as SYSTEM and talks to the server, and a **Helper** that the Service starts in the signed-in user's session, to see what's in front and show notices. They aren't packaged yet; this is how they were installed by hand for testing.
+
+> **The agent closes programs.** When an app's time is up it's closed, and when the daily total is used up everything that isn't exempt is closed. Before installing it on a computer you use yourself, pair it with a test child whose rules mark the programs you need as exempt (e.g. your browser, terminal and Remote Desktop), and make sure the server is running so the agent learns them at its first check-in.
+
+On the child's computer you need the [.NET Desktop Runtime 10](https://dotnet.microsoft.com/download/dotnet/10.0) (it includes the .NET Runtime). The child should use a standard (non-administrator) account.
+
+**1. Publish** both programs into the same folder, one that every user can read (the Helper is started from there for whoever signs in). As an administrator:
+
+```bash
+dotnet publish src/Skjermvette.Agent.Service -c Release -o "C:\Program Files\Skjermvette\Agent"
+```
+
+```bash
+dotnet publish src/Skjermvette.Agent.Helper -c Release -o "C:\Program Files\Skjermvette\Agent"
+```
+
+**2. Pair.** In the dashboard, open the child's Devices tab and create a pairing code (valid 10 minutes). Then, as an administrator:
+
+```powershell
+& "C:\Program Files\Skjermvette\Agent\Skjermvette.Agent.Service.exe" pair 123456 --server https://skjermvette.example.com
+```
+
+The device's token is stored encrypted in `%ProgramData%\Skjermvette\Agent`, which only SYSTEM and administrators can open. Add `--name <name>` to call the device something other than the computer's name.
+
+**3. Install and start the service** (PowerShell as an administrator). It starts with Windows, and Windows restarts it if it stops:
+
+```powershell
+sc.exe create "Skjermvette Agent" binPath= "C:\Program Files\Skjermvette\Agent\Skjermvette.Agent.Service.exe" start= auto
+```
+
+```powershell
+sc.exe failure "Skjermvette Agent" reset= 86400 actions= restart/5000/restart/5000/restart/5000
+```
+
+```powershell
+sc.exe start "Skjermvette Agent"
+```
+
+The device shows as online on the child's Devices tab within about 15 seconds.
+
+**To remove it**, stop and delete the service, forget the pairing, then unpair the device in the dashboard:
+
+```powershell
+sc.exe stop "Skjermvette Agent"
+```
+
+```powershell
+sc.exe delete "Skjermvette Agent"
+```
+
+```powershell
+& "C:\Program Files\Skjermvette\Agent\Skjermvette.Agent.Service.exe" forget
+```
+
 ## Development
 
-Requirements: [.NET SDK 10](https://dotnet.microsoft.com/download) and [Node.js](https://nodejs.org/) 22 or newer (for the dashboard). Docker is only needed to try the self-hosting setup.
+Requirements: Windows (for the agent), the [.NET SDK 10](https://dotnet.microsoft.com/download) and [Node.js](https://nodejs.org/) 22 or newer. No database server or Docker is needed: development and tests use SQLite files.
 
-Build and run the tests:
+### Build and test
 
 ```bash
 dotnet test Skjermvette.slnx
 ```
 
-Run the server locally. It uses a SQLite file, `skjermvette.dev.db`, and listens on http://localhost:5131. Browse and try the API at http://localhost:5131/docs (Swagger UI; the raw OpenAPI document is at `/openapi/v1.json`).
+```bash
+npm ci --prefix web
+```
+
+```bash
+npm run check --prefix web
+```
+
+`npm run check` checks the dashboard's types, lint and formatting (`npm run format --prefix web` fixes formatting). Both must pass before a pull request.
+
+### Run the server and dashboard
+
+Start the server in one terminal. It uses a SQLite file, `src/Skjermvette.Server/skjermvette.dev.db`, and listens on http://localhost:5131:
 
 ```bash
 dotnet run --project src/Skjermvette.Server --launch-profile http
 ```
 
-After changing the data model, delete `src/Skjermvette.Server/skjermvette.dev.db` so the development database is recreated. To add a Postgres migration for production:
+Start the dashboard in another, then open **http://localhost:5173**. Vite reloads on every change and forwards API calls to the server:
+
+```bash
+npm run dev --prefix web
+```
+
+The page the server opens by itself (http://localhost:5131) only shows the dashboard once you've built it into the server with `npm run build --prefix web`. The API can be browsed and tried at http://localhost:5131/docs (Swagger UI; the raw OpenAPI document is at `/openapi/v1.json`).
+
+### First sign-in
+
+In development, **emails aren't sent**: each one is written as a file to `src/Skjermvette.Server/emails/`. Open the newest `.eml` file in a text editor or mail program.
+
+1. Register at http://localhost:5173. Any email address works; the password needs at least 10 characters.
+2. Open the confirmation email and follow its link (links point at the Vite dev server, so keep it running).
+3. Sign in. The second step's code is in the newest email.
+4. Add a child, set its rules, and pair devices from its Devices tab.
+
+### Database
+
+After changing the data model, stop the server and delete `src/Skjermvette.Server/skjermvette.dev.db`. It's created again, empty, at the next start. Production uses Postgres migrations, which are applied at startup. To add one:
 
 ```bash
 dotnet tool restore
@@ -104,7 +247,7 @@ dotnet ef migrations add <Name> --project src/Skjermvette.Server --output-dir Da
 
 ### Fake devices
 
-`tools/FakeDevice` pretends to be a phone or PC, so you can try limits across devices before any real agent exists. With the server running, create a pairing code on a child's Devices tab, then pair:
+`tools/FakeDevice` pretends to be a phone or PC, so you can try limits across devices without a real agent. With the server running, create a pairing code on a child's Devices tab, then pair:
 
 ```bash
 dotnet run --project tools/FakeDevice -- pair 123456 --name Phone --platform Android
@@ -122,36 +265,36 @@ Keep "using" an app the way a real agent reports it, every 15 seconds, and watch
 dotnet run --project tools/FakeDevice -- live PC website www.youtube.com
 ```
 
-Run the tool without arguments for all commands (`state`, `watch`, `list`, `forget`).
+Run the tool without arguments for all commands (`state`, `watch`, `list`, `forget`). Paired fake devices are saved in `%LOCALAPPDATA%\Skjermvette\FakeDevice`.
 
-### Parent dashboard
+### Windows agent in a console
 
-The dashboard lives in `web/`. While working on it, run the server (above) and the Vite dev server side by side, then open http://localhost:5173. Vite forwards API calls to the server.
+The Service and Helper can run in two terminals, without installing anything or administrator rights. In Development the Service keeps its data in `%LOCALAPPDATA%\Skjermvette\Agent`, and it can't start the Helper itself (that needs SYSTEM), so you start both.
 
-```bash
-npm install --prefix web
-```
+> **It really closes programs** on your computer. First give the test child generous limits, and mark everything you need to keep open (your editor, terminal, browser, Remote Desktop) as exempt.
 
-```bash
-npm run dev --prefix web
-```
-
-Before committing, check types, lint and formatting (`npm run format --prefix web` fixes formatting):
+Pair with a code from the child's Devices tab:
 
 ```bash
-npm run check --prefix web
+dotnet run --project src/Skjermvette.Agent.Service -- pair 123456 --server http://localhost:5131
 ```
 
-To have the server itself serve the dashboard at http://localhost:5131, build it into `src/Skjermvette.Server/wwwroot`:
+Run the Service:
 
 ```bash
-npm run build --prefix web
+dotnet run --project src/Skjermvette.Agent.Service
 ```
 
-More commands will be added here as each part is built.
+Run the Helper in a second terminal. Debug builds print what's in use every second:
+
+```bash
+dotnet run --project src/Skjermvette.Agent.Helper
+```
+
+Stop both with Ctrl+C. To pair again, run `dotnet run --project src/Skjermvette.Agent.Service -- forget` and unpair the old device in the dashboard.
 
 ## Contributing
 
 - Work on feature branches: `feat/<name>`, `docs/<name>` or `fix/<issue>-<name>`. Never commit directly to `main`.
 - Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/).
-- Every change goes through a pull request against `main`.
+- Every change goes through a pull request against `main`, with `dotnet test Skjermvette.slnx` (and `npm run check --prefix web` for dashboard changes) passing.
