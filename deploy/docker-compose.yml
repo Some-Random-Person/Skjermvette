@@ -1,0 +1,53 @@
+# The Skjermvette server and its Postgres database. cloudflared runs on the host and forwards to
+# http://127.0.0.1:8080. Settings go in .env next to this file (copy .env.example). See the README.
+
+# The containers' network. Requests from cloudflared arrive from its gateway, so only this network may set
+# the client's address (CF-Connecting-IP) and scheme (X-Forwarded-Proto). Change it if it clashes with another network.
+x-network: &network 172.30.80.0/24
+
+name: skjermvette
+
+services:
+  server:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      Database__Provider: Postgres
+      ConnectionStrings__DefaultConnection: Host=db;Database=skjermvette;Username=skjermvette;Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      App__ProxyNetwork: *network
+    ports:
+      # This computer only: forged forwarding headers from anywhere else must not reach the server.
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - keys:/home/app/.aspnet/DataProtection-Keys
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: skjermvette
+      POSTGRES_USER: skjermvette
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U skjermvette -d skjermvette"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: *network
+
+volumes:
+  db:
+  keys:

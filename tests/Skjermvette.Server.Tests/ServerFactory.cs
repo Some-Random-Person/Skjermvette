@@ -28,6 +28,9 @@ public class ServerFactory : WebApplicationFactory<Program>
     private readonly string _dbPath = Path.Combine(Path.GetTempPath(), $"skjermvette-test-{Guid.NewGuid():N}.db");
     private readonly string _emailDirectory = Path.Combine(Path.GetTempPath(), $"skjermvette-test-emails-{Guid.NewGuid():N}");
 
+    // Outside development the sign-in cookies are sent over HTTPS only (#6).
+    public ServerFactory() => ClientOptions.BaseAddress = new Uri("https://localhost");
+
     // 12 Oct 2026, 10:00 UTC. Children in tests use UTC with a midnight reset.
     public TestClock Clock { get; } = new(new DateTimeOffset(2026, 10, 12, 10, 0, 0, TimeSpan.Zero));
 

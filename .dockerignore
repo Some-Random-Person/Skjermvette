@@ -1,0 +1,13 @@
+# Only web/ and src/ are needed to build the server image (deploy/Dockerfile).
+**/bin/
+**/obj/
+**/node_modules/
+src/Skjermvette.Server/wwwroot/
+src/Skjermvette.Server/emails/
+**/*.db
+**/.env
+.git/
+.claude/
+tests/
+tools/
+docs/
