@@ -13,6 +13,9 @@ public static class HelperPipe
 {
     public const string Name = "ScreenTime.Agent";
 
+    /// <summary>Tells the Helper it was started by the Service, which keeps one per session, so it needs no mutex.</summary>
+    public const string ServiceArgument = "--service";
+
     /// <summary>Longer messages are refused, so a bad client can't make the Service buffer without limit.</summary>
     public const int MaxMessageBytes = 8192;
 

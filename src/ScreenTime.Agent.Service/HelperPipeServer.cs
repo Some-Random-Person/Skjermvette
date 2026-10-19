@@ -1,4 +1,5 @@
 using System.IO.Pipes;
+using System.Runtime.InteropServices;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using ScreenTime.Core;
@@ -8,10 +9,11 @@ namespace ScreenTime.Agent.Service;
 /// <summary>
 /// Receives what is in use from the Helper (<see cref="HelperPipe"/>) and feeds it to the <see cref="UsageTracker"/>,
 /// stamped with this service's clock, and to the <see cref="Enforcer"/>, whose notices go back to the Helper. Only SYSTEM and the user signed in at the computer can open the pipe; when that
-/// user changes, the pipe is closed and opened again for the new one. One Helper at a time: a new connection replaces
-/// the previous one.
+/// user changes, the pipe is closed and opened again for the new one. Only the Helper the Service started is taken
+/// (<see cref="HelperProcess"/>). One Helper at a time: a new connection replaces the previous one.
 /// </summary>
-public sealed class HelperPipeServer(UsageTracker tracker, Enforcer enforcer, TimeProvider time, ILogger<HelperPipeServer> logger, string pipeName = HelperPipe.Name)
+public sealed class HelperPipeServer(UsageTracker tracker, Enforcer enforcer, HelperProcess helper, TimeProvider time, ILogger<HelperPipeServer> logger,
+    string pipeName = HelperPipe.Name)
     : BackgroundService
 {
     /// <summary>
@@ -71,6 +73,7 @@ public sealed class HelperPipeServer(UsageTracker tracker, Enforcer enforcer, Ti
         var options = PipeOptions.Asynchronous | PipeOptions.FirstPipeInstance;
         CancellationTokenSource? servingCts = null;
         var serving = Task.CompletedTask;
+        NamedPipeServerStream? refused = null;
         try
         {
             while (true)
@@ -79,6 +82,11 @@ public sealed class HelperPipeServer(UsageTracker tracker, Enforcer enforcer, Ti
                 var pipe = NamedPipeServerStreamAcl.Create(pipeName, PipeDirection.InOut, NamedPipeServerStream.MaxAllowedServerInstances,
                     PipeTransmissionMode.Message, options, HelperPipe.MaxMessageBytes, HelperPipe.MaxMessageBytes, security);
                 options &= ~PipeOptions.FirstPipeInstance;
+                if (refused is not null)
+                {
+                    await refused.DisposeAsync();
+                    refused = null;
+                }
                 try
                 {
                     await pipe.WaitForConnectionAsync(ct);
@@ -89,6 +97,13 @@ public sealed class HelperPipeServer(UsageTracker tracker, Enforcer enforcer, Ti
                     throw;
                 }
 
+                if (!FromHelper(pipe))
+                {
+                    // Closed once the next instance is open. The Helper already connected keeps sending.
+                    logger.LogWarning("A program other than the Helper the Service started connected to the pipe. Disconnecting it.");
+                    refused = pipe;
+                    continue;
+                }
                 await StopAsync(servingCts, serving);
                 servingCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 serving = ServeAsync(pipe, servingCts.Token);
@@ -96,9 +111,14 @@ public sealed class HelperPipeServer(UsageTracker tracker, Enforcer enforcer, Ti
         }
         finally
         {
+            if (refused is not null)
+                await refused.DisposeAsync();
             await StopAsync(servingCts, serving);
         }
     }
+
+    private bool FromHelper(NamedPipeServerStream pipe) =>
+        GetNamedPipeClientProcessId(pipe.SafePipeHandle, out var id) && helper.Accepts((int)id);
 
     private static async Task StopAsync(CancellationTokenSource? servingCts, Task serving)
     {
@@ -151,4 +171,7 @@ public sealed class HelperPipeServer(UsageTracker tracker, Enforcer enforcer, Ti
         security.AddAccessRule(new PipeAccessRule(user, ClientRights, AccessControlType.Allow));
         return security;
     }
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool GetNamedPipeClientProcessId(SafeHandle pipe, out uint processId);
 }

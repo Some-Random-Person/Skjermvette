@@ -1,3 +1,4 @@
+using System.Security.Principal;
 using ScreenTime.Agent.Service;
 
 // Commands get no command-line configuration: "pair 123456" isn't a setting.
@@ -10,6 +11,8 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<UsageTracker>();
 builder.Services.AddSingleton<BudgetState>();
 builder.Services.AddSingleton<Enforcer>();
+// Only as SYSTEM does the Service start the Helper itself (HelperWorker).
+builder.Services.AddSingleton(new HelperProcess(WindowsIdentity.GetCurrent().IsSystem));
 builder.Services.AddHostedService<SyncWorker>();
 builder.Services.AddHostedService<HelperPipeServer>();
 builder.Services.AddHostedService<HelperWorker>();

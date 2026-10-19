@@ -40,24 +40,28 @@ Loaded when working in `src/ScreenTime.Agent.Service/`. General rules and the C#
 - The Service answers on the same pipe with `HelperNotice`s, one JSON object per line, since the user can't switch the pipe to message mode for reading.
 - **ACL:** SYSTEM and the service's own account (the same once installed; the developer in a console) get full control. The user signed in at the console (`ConsoleSession.User()`, not Remote Desktop) gets only `ClientRights` (connect, read and write), not `GENERIC_WRITE`, which would let them create instances of the pipe and pose as the service.
 - An instance is always open, so the name can't be taken while the service runs. When the console user changes, every instance is closed and the pipe is created again (`FirstPipeInstance`) for the new user.
+- **Only the Helper the Service started** (`HelperProcess`): the client's process id (`GetNamedPipeClientProcessId`) must be the one `HelperWorker` started, or it's disconnected, so another program can't send made-up samples (e.g. empty ones). A Helper that connects before its id is recorded is refused once and connects again 2 s later. In a console (not SYSTEM) the Helper is started by hand, so any client is taken. A refused instance is closed only once the next one is open, so the name is never free.
 - One Helper at a time: a new connection replaces the previous one.
-- **Not checked yet:** which program is on the other end. Any program the user runs can send samples (e.g. empty ones). Checking the client's executable is part of tamper resistance.
 
 ## Starting the Helper (`HelperWorker`)
 - Every second: when a user is signed in at the console (`ConsoleSession`), the Helper runs in their session, started as them with `WTSQueryUserToken` + `CreateProcessAsUser` on `winsta0\default` (`HelperLauncher`). Only works as SYSTEM: in a console (Development) it logs that and the Helper is started by hand.
+- **High integrity** (#60): the user's token is copied and raised to High (`S-1-16-12288`) before starting the Helper. The child's programs run at Medium, and Windows doesn't let a lower level close, pause, change the permissions of, write into or send window messages to a higher one, even of the same user (as with programs run as administrator). The Helper is still the child's account, with no admin rights.
+- Its environment is the user's without `DOTNET_*`, `COREHOST_*`, `CORECLR_*`, `COMPlus_*` and `COR_*` (`WithoutRuntimeSettings`). The Helper isn't self-contained, so e.g. `DOTNET_ROOT` or `DOTNET_STARTUP_HOOKS` set by the child would load their own code into it at High.
+- It's started with `--service` (`HelperPipe.ServiceArgument`), so it skips its mutex: any program could take that name first and keep it from starting.
 - Where: `Agent:HelperPath`, or `ScreenTime.Agent.Helper.exe` next to the service (installing has to put it there). Every user who can sign in must be able to read that folder (e.g. Program Files): started from a user's profile, it fails for other users.
 - The Helper's `Process` comes from `GetProcessById`, so it has no `ExitCode` (reading it throws).
 - When to start, wait or close is decided by `HelperSupervisor`, which needs no Windows:
   - a Helper that stops after running at least 30 s (e.g. the child killed it) is started again straight away;
   - one that keeps stopping sooner, or can't be started, is retried after 1 s, doubling up to 30 s;
   - when another user signs in at the console, the old Helper is closed and one is started for the new user. While the session is switching (nobody at the console), it's left running.
-- Before starting, any Helper already in that session (left from before, or started by hand) is closed, since one per session (its mutex) would make the new one quit. The Helper is closed when the service stops.
-- **Not handled yet:** the child owns the Helper's process, so they can kill it (it comes back within a second) or hold its `Local\` mutex from another program so it keeps quitting (retried every 30 s), #60.
+- Before starting, any Helper already in that session (left from before, or started by hand) is closed, so there's one per session. The Helper is closed when the service stops.
+- **Not tried as SYSTEM yet** (#60): the High integrity Helper (that it starts, tracks and shows notices, and that the child can't close it from Task Manager or `taskkill`), the cleaned environment, and the pipe refusing other programs.
 - **Tried as SYSTEM** (installed by hand, 2026-10-16): starting the Helper in the user's session, it connecting to the pipe, switching to another user (old Helper closed, new one started), restarting it after a kill (0.2 s after a long run, 2 s after a quick one) and closing it when the service stops.
 
 ## Tests (`tests/ScreenTime.Agent.Tests`)
 - `AgentHarness` runs a paired agent against the real server in memory (`ServerFactory` from the server tests), on the server's `TestClock`, with a switch that makes the network fail like an unreachable server.
 - `HelperPipeServerTests` runs the Helper's `PipeSender` against `HelperPipeServer` over a real pipe (unique name per test), as the signed-in user.
 - `EnforcerTests` passes the `Enforcer` a fake for closing programs, so nothing is killed.
+- `HelperLauncherTests` cover only which environment variables are left out; starting the Helper needs SYSTEM.
 - `HelperSupervisorTests` drive `HelperSupervisor` with the server tests' `TestClock`; starting a process as another user isn't tested (it needs SYSTEM).
 - `ServerClient` takes a handler factory for this only: SignalR disposes the handler it's given, so each use gets a new one.
