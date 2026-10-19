@@ -1,4 +1,4 @@
-using ScreenTime.Core.Models;
+using Skjermvette.Core.Models;
 
 namespace FakeDevice;
 

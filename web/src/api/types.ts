@@ -1,4 +1,4 @@
-// Mirrors the server's DTOs in src/ScreenTime.Server/Contracts. Enums are serialized as strings.
+// Mirrors the server's DTOs in src/Skjermvette.Server/Contracts. Enums are serialized as strings.
 
 export type AppRuleKind = "Limited" | "Exempt";
 export type MatcherKind = "Process" | "Package" | "Bundle" | "Domain" | "IosToken";

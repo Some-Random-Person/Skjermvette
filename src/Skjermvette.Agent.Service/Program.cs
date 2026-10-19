@@ -1,0 +1,21 @@
+using System.Security.Principal;
+using Skjermvette.Agent.Service;
+
+// Commands get no command-line configuration: "pair 123456" isn't a setting.
+var builder = Host.CreateApplicationBuilder(Commands.IsCommand(args) ? [] : args);
+if (Commands.IsCommand(args))
+    return await Commands.RunAsync(args, builder.Configuration);
+
+builder.Services.AddWindowsService(options => options.ServiceName = "Skjermvette Agent");
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<UsageTracker>();
+builder.Services.AddSingleton<BudgetState>();
+builder.Services.AddSingleton<Enforcer>();
+// Only as SYSTEM does the Service start the Helper itself (HelperWorker).
+builder.Services.AddSingleton(new HelperProcess(WindowsIdentity.GetCurrent().IsSystem));
+builder.Services.AddHostedService<SyncWorker>();
+builder.Services.AddHostedService<HelperPipeServer>();
+builder.Services.AddHostedService<HelperWorker>();
+
+await builder.Build().RunAsync();
+return Environment.ExitCode;

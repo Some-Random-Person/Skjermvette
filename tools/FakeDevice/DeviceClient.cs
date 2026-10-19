@@ -4,8 +4,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
-using ScreenTime.Core.DeviceApi;
-using ScreenTime.Core.Models;
+using Skjermvette.Core.DeviceApi;
+using Skjermvette.Core.Models;
 
 namespace FakeDevice;
 

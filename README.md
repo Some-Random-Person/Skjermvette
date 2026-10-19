@@ -1,4 +1,4 @@
-# ScreenTimeManagement
+# Skjermvette
 
 Parental screen-time control that works **across all of a child's devices**. One daily budget is shared by the phone, tablet and computer, so switching devices doesn't get around the limits.
 
@@ -58,10 +58,10 @@ Child devices ──HTTPS + SignalR (device token)──────┘
 
 | Path | Contents |
 |---|---|
-| `src/ScreenTime.Core` | Platform-neutral rules: budget calculation, app matching, day boundaries |
-| `src/ScreenTime.Server` | Self-hosted API, SignalR hub and database |
-| `src/ScreenTime.Agent.Service` | Windows service: sync, enforcement, browser policies |
-| `src/ScreenTime.Agent.Helper` | Windows helper in the child's session: tracking, block overlay, tray |
+| `src/Skjermvette.Core` | Platform-neutral rules: budget calculation, app matching, day boundaries |
+| `src/Skjermvette.Server` | Self-hosted API, SignalR hub and database |
+| `src/Skjermvette.Agent.Service` | Windows service: sync, enforcement, browser policies |
+| `src/Skjermvette.Agent.Helper` | Windows helper in the child's session: tracking, block overlay, tray |
 | `extension/` | Chrome/Edge (Manifest V3) extension |
 | `web/` | Parent dashboard (React + Vite) |
 | `tests/` | xUnit tests for Core and Server |
@@ -83,23 +83,23 @@ Requirements: [.NET SDK 10](https://dotnet.microsoft.com/download) and [Node.js]
 Build and run the tests:
 
 ```bash
-dotnet test ScreenTime.slnx
+dotnet test Skjermvette.slnx
 ```
 
-Run the server locally. It uses a SQLite file, `screentime.dev.db`, and listens on http://localhost:5131. Browse and try the API at http://localhost:5131/docs (Swagger UI; the raw OpenAPI document is at `/openapi/v1.json`).
+Run the server locally. It uses a SQLite file, `skjermvette.dev.db`, and listens on http://localhost:5131. Browse and try the API at http://localhost:5131/docs (Swagger UI; the raw OpenAPI document is at `/openapi/v1.json`).
 
 ```bash
-dotnet run --project src/ScreenTime.Server --launch-profile http
+dotnet run --project src/Skjermvette.Server --launch-profile http
 ```
 
-After changing the data model, delete `src/ScreenTime.Server/screentime.dev.db` so the development database is recreated. To add a Postgres migration for production:
+After changing the data model, delete `src/Skjermvette.Server/skjermvette.dev.db` so the development database is recreated. To add a Postgres migration for production:
 
 ```bash
 dotnet tool restore
 ```
 
 ```bash
-dotnet ef migrations add <Name> --project src/ScreenTime.Server --output-dir Data/Migrations
+dotnet ef migrations add <Name> --project src/Skjermvette.Server --output-dir Data/Migrations
 ```
 
 ### Fake devices
@@ -142,7 +142,7 @@ Before committing, check types, lint and formatting (`npm run format --prefix we
 npm run check --prefix web
 ```
 
-To have the server itself serve the dashboard at http://localhost:5131, build it into `src/ScreenTime.Server/wwwroot`:
+To have the server itself serve the dashboard at http://localhost:5131, build it into `src/Skjermvette.Server/wwwroot`:
 
 ```bash
 npm run build --prefix web

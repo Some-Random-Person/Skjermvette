@@ -14,7 +14,7 @@ Android, iOS, macOS and Linux agents are later phases that use the same device A
 
 ## Architecture
 ```
-Parent (any browser) ──> Dashboard (web/, served by the server) ──HTTPS──> ScreenTime.Server (ASP.NET Core + SignalR)
+Parent (any browser) ──> Dashboard (web/, served by the server) ──HTTPS──> Skjermvette.Server (ASP.NET Core + SignalR)
                                                                               │  EF Core → Postgres (prod) / SQLite (dev + tests)
 Child devices ──HTTPS + SignalR (device token)─────────────────────────────────┘
   Windows: Service (SYSTEM) + user-session Helper + browser extension (native messaging)
@@ -44,8 +44,8 @@ In production the server runs in Docker with Postgres, behind a **Cloudflare Tun
 ## Repository layout
 
 **Done:**
-- `ScreenTime.slnx`
-- `src/ScreenTime.Core/`: platform-neutral domain shared by the server and agents, with no I/O.
+- `Skjermvette.slnx`
+- `src/Skjermvette.Core/`: platform-neutral domain shared by the server and agents, with no I/O.
   - `Models/`: `Policy`, `LogicalApp`, `AppMatcher` (process | package | bundle | domain | iosToken), `UsageEvent`, `BudgetSnapshot`, `AppBudget`, `Lease`, `TimeWindow`.
   - `BudgetCalculator`:
     - remaining time per limited app, and remaining total (exempt apps excluded);
@@ -53,18 +53,18 @@ In production the server runs in Docker with Postgres, behind a **Cloudflare Tun
     - overlapping time is merged (`UsedTime`).
   - `AppResolver`: raw identifier → logical app. Subdomains match, and the most specific domain wins.
   - `DeviceApi/`: request and response types for the device API, shared by the server, FakeDevice and the agents.
-- `src/ScreenTime.Server/`: ASP.NET Core minimal API. Parent auth (Identity, cookie), account settings, children and rules, apps and catalog, devices and pairing, the device API, the SignalR `BudgetHub`. It also serves the built dashboard from `wwwroot`.
+- `src/Skjermvette.Server/`: ASP.NET Core minimal API. Parent auth (Identity, cookie), account settings, children and rules, apps and catalog, devices and pairing, the device API, the SignalR `BudgetHub`. It also serves the built dashboard from `wwwroot`.
 - `web/`: React + Vite + TypeScript dashboard.
-- `src/ScreenTime.Agent.Service/` (part): pairing and `forget` commands, the device token (DPAPI, folder open only to SYSTEM and Administrators), the SQLite outbox, the 15-second check-in, the SignalR connection, the offline allowance and stopping when unpaired. Receives usage samples from the Helper over a named pipe (open only to SYSTEM and the signed-in user) into its `UsageTracker`. Closes programs whose time is up. Keeps the Helper running in the signed-in user's session (`WTSQueryUserToken` + `CreateProcessAsUser`, as SYSTEM only). See its `CLAUDE.md`.
-- `src/ScreenTime.Agent.Helper/` (part): foreground tracking (`SetWinEventHook` plus a 1-second tick, reported by process name), audio (WASAPI `IAudioSessionManager2`, processes making sound, by process name), idle after 2 minutes without input (then only sound counts), and the pipe to the Service. See its `CLAUDE.md`.
-- `tests/ScreenTime.Core.Tests/`, `tests/ScreenTime.Server.Tests/`, `tests/ScreenTime.Agent.Tests/` (xUnit, `WebApplicationFactory`, SQLite).
+- `src/Skjermvette.Agent.Service/` (part): pairing and `forget` commands, the device token (DPAPI, folder open only to SYSTEM and Administrators), the SQLite outbox, the 15-second check-in, the SignalR connection, the offline allowance and stopping when unpaired. Receives usage samples from the Helper over a named pipe (open only to SYSTEM and the signed-in user) into its `UsageTracker`. Closes programs whose time is up. Keeps the Helper running in the signed-in user's session (`WTSQueryUserToken` + `CreateProcessAsUser`, as SYSTEM only). See its `CLAUDE.md`.
+- `src/Skjermvette.Agent.Helper/` (part): foreground tracking (`SetWinEventHook` plus a 1-second tick, reported by process name), audio (WASAPI `IAudioSessionManager2`, processes making sound, by process name), idle after 2 minutes without input (then only sound counts), and the pipe to the Service. See its `CLAUDE.md`.
+- `tests/Skjermvette.Core.Tests/`, `tests/Skjermvette.Server.Tests/`, `tests/Skjermvette.Agent.Tests/` (xUnit, `WebApplicationFactory`, SQLite).
 - `tools/FakeDevice/`: pairs like a real device and reports made-up usage. Use it to test across devices.
 
 **To do:**
-- `src/ScreenTime.Agent.Service/` (the rest): installed as a Windows Service (LocalSystem, auto-restart on failure).
+- `src/Skjermvette.Agent.Service/` (the rest): installed as a Windows Service (LocalSystem, auto-restart on failure).
   - Enforcement (closing blocked programs in use and the Helper's notices are done):
     - sets Edge/Chrome policies in the registry: force-install the extension, disable InPrivate/Incognito, block developer mode.
-- `src/ScreenTime.Agent.Helper/` (the rest): small WinForms app in the child's session. It's needed because a SYSTEM service can't see the foreground window or show UI.
+- `src/Skjermvette.Agent.Helper/` (the rest): small WinForms app in the child's session. It's needed because a SYSTEM service can't see the foreground window or show UI.
   - Audible tabs through the extension (which processes play audio is done).
   - **Native messaging host** for the extension. When a browser is in front, time goes to the app for the active tab's domain, not to "Chrome".
   - A tray icon showing the time left (the warnings and the full-screen "time's up" notice are done).
@@ -113,7 +113,7 @@ These are implemented on the server and in Core; an agent only has to report and
 - **Linux:** X11 tracking first; Wayland through a GNOME Shell or KDE extension.
 
 ## Verification for the remaining steps
-- **Automated:** `dotnet test ScreenTime.slnx` (Core and server) and `npm run check --prefix web`. Agent logic that doesn't need Windows APIs, e.g. turning foreground and audio samples into events, should get its own unit tests.
+- **Automated:** `dotnet test Skjermvette.slnx` (Core and server) and `npm run check --prefix web`. Agent logic that doesn't need Windows APIs, e.g. turning foreground and audio samples into events, should get its own unit tests.
 - **End-to-end on the dev machine:**
   - Run the server (`dotnet run`). In the dashboard, create a child with YouTube at 2 min, a 5 min total, and Teams exempt.
   - Run the Service and Helper in console mode, and load the unpacked extension in Edge.

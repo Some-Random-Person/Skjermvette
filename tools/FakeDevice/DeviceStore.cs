@@ -2,11 +2,11 @@ using System.Text.Json;
 
 namespace FakeDevice;
 
-/// <summary>Keeps paired fake devices in %LOCALAPPDATA%\ScreenTime\FakeDevice, one JSON file per device.</summary>
+/// <summary>Keeps paired fake devices in %LOCALAPPDATA%\Skjermvette\FakeDevice, one JSON file per device.</summary>
 public static class DeviceStore
 {
     public static readonly string Folder = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ScreenTime", "FakeDevice");
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Skjermvette", "FakeDevice");
 
     public static async Task SaveAsync(SavedDevice device)
     {

@@ -15,7 +15,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: "../src/ScreenTime.Server/wwwroot",
+    outDir: "../src/Skjermvette.Server/wwwroot",
     emptyOutDir: true,
   },
 });

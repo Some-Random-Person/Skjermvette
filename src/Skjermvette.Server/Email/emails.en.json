@@ -1,0 +1,21 @@
+{
+  "confirmEmail.subject": "Confirm your email for Skjermvette",
+  "confirmEmail.body": "Hi,\n\nPlease confirm that this is your email address, so you can sign in to Skjermvette:\n\n{link}\n\nThe link works for 24 hours. If it has expired, sign in and ask for a new one.\n\nIf you didn't create a Skjermvette account, you can ignore this email.",
+  "resetPassword.subject": "Reset your Skjermvette password",
+  "resetPassword.body": "Hi,\n\nSomeone asked to reset the password for the Skjermvette account with this email address. To choose a new password, open this link:\n\n{link}\n\nThe link works for 1 hour. If it has expired, ask for a new one on the sign-in page.\n\nIf you didn't ask for this, you can ignore this email. Your password stays the same.",
+  "changeEmail.subject": "Confirm your new email for Skjermvette",
+  "changeEmail.body": "Hi,\n\nYou asked to use this address to sign in to Skjermvette. To confirm it, open this link:\n\n{link}\n\nUntil you do, your account keeps its current address. The link works for 24 hours.\n\nIf you didn't ask for this, you can ignore this email.",
+  "emailChangeRequested.subject": "Your Skjermvette email is about to change",
+  "emailChangeRequested.body": "Hi,\n\nSomeone signed in to your Skjermvette account asked to change its email address to {newEmail}. Nothing changes until the link sent to that address is opened.\n\nIf this wasn't you, someone else knows your password. Reset it now with this link, this will cancel the change:\n\n{link}\n\nThe link works for 1 hour. If it has expired, choose \"Forgot your password?\" on the sign-in page.",
+  "registerAttempt.subject": "You already have a Skjermvette account",
+  "registerAttempt.body": "Hi,\n\nSomeone just tried to create a Skjermvette account with this email address, but it already has one.\n\nIf that was you, sign in here:\n\n{signInLink}\n\nIf you've forgotten your password, choose a new one here:\n\n{forgotLink}\n\nIf it wasn't you, you can ignore this email. Nothing has changed on your account.",
+  "passwordChanged.subject": "Your Skjermvette password was changed",
+  "passwordChanged.body": "Hi,\n\nThe password for your Skjermvette account was just changed. If that was you, there's nothing more to do.\n\nIf this wasn't you, reset your password now with this link, which also signs everyone else out:\n\n{link}\n\nThe link works for 1 hour. After that, ask for a new one here:\n\n{forgotLink}",
+  "code.subject": "Your Skjermvette code",
+  "code.body": "Your Skjermvette code is:\n\n{code}\n\nThis code is only valid for 10 minutes.\n\nIf you didn't request a code, you can safely ignore this email.",
+  "twoFactorChanged.subject": "Your Skjermvette sign-in security changed",
+  "twoFactorChanged.body": "Hi,\n\n{change} If that was you, there's nothing more to do.\n\nIf this wasn't you, someone else is signed in to your account. Reset your password now with this link, which also signs everyone else out:\n\n{link}\n\nThe link works for 1 hour. After that, ask for a new one here:\n\n{forgotLink}",
+  "twoFactorChanged.appOn": "An authenticator app was just turned on for your Skjermvette account. Your sign-in codes now come from that app.",
+  "twoFactorChanged.appOff": "The authenticator app was just turned off for your Skjermvette account. Your sign-in codes are emailed to you again.",
+  "twoFactorChanged.recoveryCodes": "New recovery codes were just made for your Skjermvette account. The old ones no longer work."
+}
