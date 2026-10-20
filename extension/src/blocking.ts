@@ -12,7 +12,7 @@ export interface WebsiteBlocks {
 }
 
 /** The same check as the agent's, so a bad domain can't make the browser refuse the whole list. */
-const domain = /^[a-z0-9.-]{1,253}$/;
+const isDomain = (d: unknown) => typeof d === "string" && /^[a-z0-9.-]{1,253}$/.test(d);
 
 /** The list in a message from the agent, or null if it isn't one. */
 export function websiteBlocksOf(message: unknown): WebsiteBlocks | null {
@@ -20,11 +20,9 @@ export function websiteBlocksOf(message: unknown): WebsiteBlocks | null {
   const valid =
     typeof m?.blockOthers === "boolean" &&
     Array.isArray(m.blocked) &&
-    m.blocked.every(
-      (b) => domain.test(b?.domain) && (b.app === null || typeof b.app === "string"),
-    ) &&
+    m.blocked.every((b) => isDomain(b?.domain) && (b.app === null || typeof b.app === "string")) &&
     Array.isArray(m.allowed) &&
-    m.allowed.every((d) => domain.test(d));
+    m.allowed.every(isDomain);
   return valid ? (m as WebsiteBlocks) : null;
 }
 
