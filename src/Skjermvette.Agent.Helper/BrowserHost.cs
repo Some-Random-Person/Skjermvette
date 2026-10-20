@@ -33,7 +33,10 @@ public static class BrowserHost
                 // The length is in the computer's own byte order, which on Windows is little-endian.
                 var length = BinaryPrimitives.ReadInt32LittleEndian(header);
                 if (read < header.Length || length is <= 0 or > BrowserPipe.MaxMessageBytes)
+                {
+                    await Console.Error.WriteLineAsync($"Not a message from the extension: {read} bytes of header, length {length}.");
                     return 1;
+                }
 
                 var message = new byte[length];
                 await input.ReadExactlyAsync(message);
@@ -43,7 +46,7 @@ public static class BrowserHost
         catch (Exception e) when (e is TimeoutException or IOException or UnauthorizedAccessException)
         {
             // Standard output belongs to the browser; it logs standard error.
-            await Console.Error.WriteLineAsync($"Not connected to the Helper: {e.Message}");
+            await Console.Error.WriteLineAsync($"Not passed on to the Helper: {e.GetType().Name}: {e.Message}");
             return 1;
         }
     }

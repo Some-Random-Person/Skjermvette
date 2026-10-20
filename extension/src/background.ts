@@ -8,13 +8,18 @@ const retryMs = 2000;
 
 let port: chrome.runtime.Port | undefined;
 let last = "";
+/** Set while waiting to connect again, so tab changes in the meantime don't each start a connection. */
+let retry: ReturnType<typeof setTimeout> | undefined;
 
 function connect(): chrome.runtime.Port {
   const connected = chrome.runtime.connectNative(host);
   connected.onDisconnect.addListener(() => {
     console.warn("Not connected to the Skjermvette agent:", chrome.runtime.lastError?.message);
     port = undefined;
-    setTimeout(() => void report(), retryMs);
+    retry ??= setTimeout(() => {
+      retry = undefined;
+      void report();
+    }, retryMs);
   });
   return connected;
 }
@@ -25,7 +30,7 @@ async function report(): Promise<void> {
   const audible = await chrome.tabs.query({ audible: true });
   const message = reportOf(browser, active, audible);
   const json = JSON.stringify(message);
-  if (port && json === last) return;
+  if ((port && json === last) || (!port && retry)) return;
 
   port ??= connect();
   port.postMessage(message);
