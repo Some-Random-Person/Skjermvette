@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Win32;
 using Skjermvette.Core;
 using Skjermvette.Core.Models;
@@ -6,12 +7,14 @@ namespace Skjermvette.Agent.Helper;
 
 /// <summary>
 /// Runs in the child's session with no window: samples what is in use (the program in front and any making sound) every
-/// second, and straight away when another window comes to the front, and sends it to the Service. Shows the Service's
-/// notices: warnings before time runs out, and a full screen when a program was closed.
+/// second, and straight away when another window comes to the front, and sends it to the Service. A browser counts as the
+/// websites the browser extension reports. Shows the Service's notices: warnings before time runs out, and a full screen
+/// when a program was closed.
 /// </summary>
 public sealed class HelperContext : ApplicationContext
 {
     private readonly PipeSender _sender = new();
+    private readonly BrowserPipeServer _browsers = new(BrowserPipe.Name(Process.GetCurrentProcess().SessionId));
     private readonly AudioSessions _audio = new();
     private readonly RecentlyHeard _heard = new();
     private readonly System.Windows.Forms.Timer _timer = new() { Interval = 1000 };
@@ -47,7 +50,7 @@ public sealed class HelperContext : ApplicationContext
         var foreground = NativeMethods.ForegroundProcessPath();
         if (string.Equals(foreground, Environment.ProcessPath, StringComparison.OrdinalIgnoreCase))
             foreground = null;
-        var inUse = Sampler.InUse(foreground, audio, sinceLastInput, _sessionActive);
+        var inUse = Sampler.InUse(foreground, audio, sinceLastInput, _sessionActive, _browsers.Reports());
         _sender.Send(inUse);
 
         var described = inUse.Length == 0 ? "nothing" : string.Join(", ", inUse.Select(k => k.Identifier));
@@ -96,6 +99,7 @@ public sealed class HelperContext : ApplicationContext
             _timer.Dispose();
             NativeMethods.UnhookWinEvent(_hook);
             _sender.Dispose();
+            _browsers.Dispose();
             _warning?.Dispose();
             _closed?.Dispose();
             _audio.Dispose();
