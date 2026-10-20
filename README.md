@@ -62,11 +62,11 @@ Child devices ──HTTPS + SignalR (device token)──────┘
 | `src/Skjermvette.Server` | Self-hosted API, SignalR hub and database; also serves the dashboard | Done |
 | `web/` | Parent dashboard (React + Vite) | Done |
 | `src/Skjermvette.Agent.Service` | Windows service: sync, offline allowance, closing programs, starting the Helper | Mostly done; browser policies to do |
-| `src/Skjermvette.Agent.Helper` | Windows helper in the child's session: tracking, warnings and the "time's up" notice | Mostly done; tray icon and browser link to do |
+| `src/Skjermvette.Agent.Helper` | Windows helper in the child's session: tracking, warnings and the "time's up" notice | Mostly done; tray icon to do |
 | `tests/` | xUnit tests for Core, the server and the Windows agent | Done |
 | `tools/FakeDevice` | Pretends to be a phone or PC, for testing across devices | Done |
 | `installer/` | Windows installer (WiX) for the Service and Helper, with pairing | Done |
-| `extension/` | Chrome/Edge (Manifest V3) extension | Not started |
+| `extension/` | Chrome/Edge (Manifest V3) extension: counts websites toward their app | Started: reports tabs; blocking to do |
 | `deploy/` | `docker-compose.yml` (server, Postgres) for self-hosting behind a Cloudflare Tunnel | Written, not yet run on a real server |
 
 [docs/plan.md](docs/plan.md) has the detailed status, and [docs/product.md](docs/product.md) the full product rules.
@@ -252,7 +252,7 @@ npm ci --prefix web
 npm run check --prefix web
 ```
 
-`npm run check` checks the dashboard's types, lint and formatting (`npm run format --prefix web` fixes formatting). Both must pass before a pull request.
+`npm run check` checks the dashboard's types, lint and formatting (`npm run format --prefix web` fixes formatting). Both must pass before a pull request. The browser extension has the same check: `npm ci --prefix extension`, then `npm run check --prefix extension`.
 
 ### Run the server and dashboard
 
@@ -338,6 +338,26 @@ dotnet run --project src/Skjermvette.Agent.Helper
 ```
 
 Stop both with Ctrl+C. To pair again, run `dotnet run --project src/Skjermvette.Agent.Service -- forget` and unpair the old device in the dashboard.
+
+### Browser extension
+
+The extension tells the Helper which website is in front and which tabs are making sound, so youtube.com in a browser counts as YouTube. Build it:
+
+```bash
+npm ci --prefix extension
+```
+
+```bash
+npm run build --prefix extension
+```
+
+Register the Helper (the Debug build, so build it first with `dotnet build src/Skjermvette.Agent.Helper`) as the extension's native messaging host, for your user only, in Chrome and Edge. `-Unregister` removes it again:
+
+```bash
+powershell -ExecutionPolicy Bypass -File extension/register-host.ps1
+```
+
+Then open `edge://extensions` (or `chrome://extensions`), turn on developer mode, choose **Load unpacked** and pick `extension/dist`. With the Helper running in a console, switching tabs shows the website in its output (e.g. `In use: www.youtube.com`). After changing the extension, build it again and press its reload button.
 
 ## How AI is used in this project
 

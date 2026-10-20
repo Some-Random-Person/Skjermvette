@@ -9,7 +9,7 @@ Project root: `C:\dev\Test`. Remote: `github.com/Some-Random-Person/Skjermvette`
 - [`docs/product.md`](docs/product.md): the full product rules. **Read it before changing how time is counted, limited or blocked.**
 - [`README.md`](README.md): what the product does, installation and the development commands. Keep it in step when a command, setting or install step changes.
 - [`docs/plan.md`](docs/plan.md): Phase 1 status, what's left (Windows agent, browser extension, deploy files), the rules agents must follow, and later phases. Update its status table when a step is done.
-- `src/Skjermvette.Server/CLAUDE.md` (server, database, auth, device API), `src/Skjermvette.Agent.Service/CLAUDE.md` (Windows agent service), `src/Skjermvette.Agent.Helper/CLAUDE.md` (its user-session Helper), `web/CLAUDE.md` (dashboard), `tools/FakeDevice/CLAUDE.md`, `deploy/CLAUDE.md` (Docker files) and `installer/CLAUDE.md` (Windows installer). These load automatically when working in those folders. When a new area starts (e.g. `extension/`), give it its own `CLAUDE.md`.
+- `src/Skjermvette.Server/CLAUDE.md` (server, database, auth, device API), `src/Skjermvette.Agent.Service/CLAUDE.md` (Windows agent service), `src/Skjermvette.Agent.Helper/CLAUDE.md` (its user-session Helper), `web/CLAUDE.md` (dashboard), `tools/FakeDevice/CLAUDE.md`, `deploy/CLAUDE.md` (Docker files), `installer/CLAUDE.md` (Windows installer) and `extension/CLAUDE.md` (browser extension). These load automatically when working in those folders. When a new area starts, give it its own `CLAUDE.md`.
 
 ## Product in short
 A parental screen-time manager: **one shared daily budget across all of a child's devices**, with a daily total, per-app limits and exempt apps. Rules that are easy to break by accident:
@@ -24,7 +24,7 @@ A parental screen-time manager: **one shared daily budget across all of a child'
 - **No new dependencies** (NuGet, npm or other) beyond the approved lists here and in `web/CLAUDE.md` without the user's clear go-ahead. Ask first.
 - When designing, rank concerns by severity, say what an addition costs, and flag unknowns instead of guessing.
 - **Running tests:** keep the failure details in the output (`[FAIL]` lines, error messages, stack traces). Never filter down to the summary only, and count a run as failed unless it clearly says "Passed" (#22, #34).
-- Build and test everything before a PR: `dotnet test Skjermvette.slnx`, plus `npm run check --prefix web` when the dashboard changed. Click through UI changes in the browser against the real server.
+- Build and test everything before a PR: `dotnet test Skjermvette.slnx`, plus `npm run check --prefix web` when the dashboard changed and `npm run check --prefix extension` when the extension did. Click through UI changes in the browser against the real server.
 
 ## Git
 - **Branches:** never work on `main`. Name them `feat/<short-name>`, `docs/<short-name>` or `fix/<issue-number>-<short-name>`, with the issue number after the prefix when there is one (e.g. `feat/12-search`). Ask before using any other prefix.

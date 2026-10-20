@@ -1,0 +1,20 @@
+{
+  "name": "skjermvette-extension",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc && node -e \"import('node:fs').then((fs) => fs.cpSync('static', 'dist', { recursive: true }))\"",
+    "lint": "eslint .",
+    "format": "prettier --write src static",
+    "check": "tsc --noEmit && eslint . && prettier --check src static"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@types/chrome": "^0.3.5",
+    "eslint": "^9.39.5",
+    "prettier": "^3.9.10",
+    "typescript": "~6.0.2",
+    "typescript-eslint": "^8.72.0"
+  }
+}

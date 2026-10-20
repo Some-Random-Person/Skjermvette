@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Skjermvette",
+  "version": "0.1.0",
+  "description": "Counts websites toward the child's screen time in Skjermvette.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwKF1wwQs3UQiZcJoyrw1OLd5OkWmTGl5C8QYruXGdaA06YYmulDtQvkzOL/K6FZUkGjGdZ3UyLJKQWwI9PbloQnh6T8dMPMH6GJ69jn1gmWz0KqoFR9Dk24cMO8OahQpmnt4fiYQ7ln+cx3wscnjeWKKaq3KSzzLzxo9BCMUu5P8qkyamt0RGSyXrsUVT0G5TWX0QOmPo4tnlnWXtmsfhsjkRjld9dnXKdkeUOtUhL1BZS9sed4YV7wD3tz6DNC3ebstjwMGD+Ly3yE8J/JdOfsffO0ejGNy4WaJwM2JRxPEnMUJMv+0UCsTEdeV6R57S/LoUx+J4cCRGRR4qbtxBQIDAQAB",
+  "minimum_chrome_version": "120",
+  "permissions": ["nativeMessaging", "tabs", "alarms"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  }
+}
