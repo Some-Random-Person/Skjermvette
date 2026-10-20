@@ -65,7 +65,7 @@ Child devices ──HTTPS + SignalR (device token)──────┘
 | `src/Skjermvette.Agent.Helper` | Windows helper in the child's session: tracking, warnings and the "time's up" notice | Mostly done; tray icon and browser link to do |
 | `tests/` | xUnit tests for Core, the server and the Windows agent | Done |
 | `tools/FakeDevice` | Pretends to be a phone or PC, for testing across devices | Done |
-| `installer/` | Windows installer (WiX) for the Service and Helper, with pairing | Built, not yet tried on a real install |
+| `installer/` | Windows installer (WiX) for the Service and Helper, with pairing | Done; tried with a silent install, the dialog and upgrades not yet |
 | `extension/` | Chrome/Edge (Manifest V3) extension | Not started |
 | `deploy/` | `docker-compose.yml` (server, Postgres) for self-hosting behind a Cloudflare Tunnel | Written, not yet run on a real server |
 

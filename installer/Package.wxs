@@ -25,7 +25,8 @@
         <Exclude Files="!(bindpath.helper)**.pdb" />
       </Files>
       <Component Directory="INSTALLFOLDER">
-        <File Id="ServiceExe" Source="!(bindpath.agent)Skjermvette.Agent.Service.exe" KeyPath="yes" />
+        <!-- Name given: without it, the name comes from Source with "!(bindpath.agent)" left in. -->
+        <File Id="ServiceExe" Name="Skjermvette.Agent.Service.exe" Source="!(bindpath.agent)Skjermvette.Agent.Service.exe" KeyPath="yes" />
         <ServiceInstall Name="Skjermvette Agent" DisplayName="Skjermvette Agent"
                         Description="Counts screen time against the child's daily budget and enforces it."
                         Type="ownProcess" Start="auto" ErrorControl="normal" Account="LocalSystem" Vital="yes">
@@ -42,7 +43,8 @@
     <Property Id="PAIRCODE" Secure="yes" Hidden="yes" />
 
     <!-- As SYSTEM, after the files are in and before the service starts, so it starts paired. -->
-    <CustomAction Id="PairDevice" Directory="INSTALLFOLDER" Execute="deferred" Impersonate="no" Return="check"
+    <!-- HideTarget: Hidden on PAIRCODE doesn't keep the command line, with the code, out of the log. -->
+    <CustomAction Id="PairDevice" Directory="INSTALLFOLDER" Execute="deferred" Impersonate="no" Return="check" HideTarget="yes"
                   ExeCommand="&quot;[INSTALLFOLDER]Skjermvette.Agent.Service.exe&quot; pair [PAIRCODE] --server &quot;[SERVER]&quot;" />
     <CustomAction Id="ForgetDeviceRollback" Directory="INSTALLFOLDER" Execute="rollback" Impersonate="no" Return="ignore"
                   ExeCommand="&quot;[INSTALLFOLDER]Skjermvette.Agent.Service.exe&quot; forget" />
