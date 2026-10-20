@@ -65,6 +65,7 @@ Child devices ──HTTPS + SignalR (device token)──────┘
 | `src/Skjermvette.Agent.Helper` | Windows helper in the child's session: tracking, warnings and the "time's up" notice | Mostly done; tray icon and browser link to do |
 | `tests/` | xUnit tests for Core, the server and the Windows agent | Done |
 | `tools/FakeDevice` | Pretends to be a phone or PC, for testing across devices | Done |
+| `installer/` | Windows installer (WiX) for the Service and Helper, with pairing | Done; tried with a silent install, the dialog and upgrades not yet |
 | `extension/` | Chrome/Edge (Manifest V3) extension | Not started |
 | `deploy/` | `docker-compose.yml` (server, Postgres) for self-hosting behind a Cloudflare Tunnel | Written, not yet run on a real server |
 
@@ -80,7 +81,7 @@ Child devices ──HTTPS + SignalR (device token)──────┘
 
 ## Installation
 
-> **Not ready for real use yet.** There's no installer for the Windows agent and no browser extension yet, so websites aren't counted or blocked on Windows. The steps below are how the parts are run today, for testing. To try everything on one computer, follow [Development](#development) instead.
+> **Not ready for real use yet.** There's no browser extension yet, so websites aren't counted or blocked on Windows, and the Windows installer isn't signed. To try everything on one computer, follow [Development](#development) instead.
 
 ### Server and dashboard
 
@@ -173,33 +174,51 @@ Listen on the local machine only, and let the tunnel forward to it:
 ASPNETCORE_URLS=http://127.0.0.1:8080 dotnet publish/server/Skjermvette.Server.dll
 ```
 
-### Windows agent (for testing)
+### Windows agent
 
-The agent is two programs: a **Service** that runs as SYSTEM and talks to the server, and a **Helper** that the Service starts in the signed-in user's session, to see what's in front and show notices. They aren't packaged yet; this is how they were installed by hand for testing.
+The agent is two programs: a **Service** that runs as SYSTEM and talks to the server, and a **Helper** that the Service starts in the signed-in user's session, to see what's in front and show notices. One installer puts in both, pairs the computer with a child and starts the service.
 
 > **The agent closes programs.** When an app's time is up it's closed, and when the daily total is used up everything that isn't exempt is closed. Before installing it on a computer you use yourself, pair it with a test child whose rules mark the programs you need as exempt (e.g. your browser, terminal and Remote Desktop), and make sure the server is running so the agent learns them at its first check-in.
 
-On the child's computer you need the [.NET Desktop Runtime 10](https://dotnet.microsoft.com/download/dotnet/10.0) (it includes the .NET Runtime). The child should use a standard (non-administrator) account.
+The child should use a standard (non-administrator) account. Nothing else needs installing: the installer includes .NET.
 
-**1. Publish** both programs into the same folder, one that every user can read (the Helper is started from there for whoever signs in). As an administrator:
+**1. Build the installer** on a computer with the .NET SDK 10 (it doesn't have to be the child's):
+
+```bash
+dotnet build installer -c Release
+```
+
+It's written to `installer/bin/Release/Skjermvette.Agent.msi`. Add `-p:Version=1.2.3` to number a release; a higher number installs over an older one and keeps the pairing.
+
+**2. Create a pairing code.** In the dashboard, open the child's Devices tab and create a code. It lasts 10 minutes.
+
+**3. Install** on the child's computer, as an administrator. Open the `.msi` and fill in your server's address and the code. The installer isn't signed yet, so Windows SmartScreen warns about it first (**More info → Run anyway**). Or install without questions, from a command prompt opened as administrator:
+
+```powershell
+msiexec /i Skjermvette.Agent.msi SERVER=https://skjermvette.example.com PAIRCODE=123456 /qn
+```
+
+If the code is wrong or has run out, or the server can't be reached, nothing is installed; make a new code and try again. The device shows as online on the child's Devices tab within about 15 seconds. The programs are in `C:\Program Files\Skjermvette\Agent`, and the device's token is stored encrypted in `%ProgramData%\Skjermvette\Agent`, which only SYSTEM and administrators can open.
+
+**To remove it**, uninstall **Skjermvette Agent** in Settings → Apps (as an administrator). That also forgets the pairing on the computer; unpair the device in the dashboard too.
+
+> Uninstalling only needs an administrator, not yet the parent PIN the plan asks for.
+
+#### Without the installer
+
+For testing a change to the agent without building the installer: publish the Service, and the Helper into a `Helper` folder below it, then pair and register the service as an administrator. This needs the [.NET Desktop Runtime 10](https://dotnet.microsoft.com/download/dotnet/10.0) on the computer.
 
 ```bash
 dotnet publish src/Skjermvette.Agent.Service -c Release -o "C:\Program Files\Skjermvette\Agent"
 ```
 
 ```bash
-dotnet publish src/Skjermvette.Agent.Helper -c Release -o "C:\Program Files\Skjermvette\Agent"
+dotnet publish src/Skjermvette.Agent.Helper -c Release -o "C:\Program Files\Skjermvette\Agent\Helper"
 ```
-
-**2. Pair.** In the dashboard, open the child's Devices tab and create a pairing code (valid 10 minutes). Then, as an administrator:
 
 ```powershell
 & "C:\Program Files\Skjermvette\Agent\Skjermvette.Agent.Service.exe" pair 123456 --server https://skjermvette.example.com
 ```
-
-The device's token is stored encrypted in `%ProgramData%\Skjermvette\Agent`, which only SYSTEM and administrators can open. Add `--name <name>` to call the device something other than the computer's name.
-
-**3. Install and start the service** (PowerShell as an administrator). It starts with Windows, and Windows restarts it if it stops:
 
 ```powershell
 sc.exe create "Skjermvette Agent" binPath= "C:\Program Files\Skjermvette\Agent\Skjermvette.Agent.Service.exe" start= auto
@@ -213,21 +232,7 @@ sc.exe failure "Skjermvette Agent" reset= 86400 actions= restart/5000/restart/50
 sc.exe start "Skjermvette Agent"
 ```
 
-The device shows as online on the child's Devices tab within about 15 seconds.
-
-**To remove it**, stop and delete the service, forget the pairing, then unpair the device in the dashboard:
-
-```powershell
-sc.exe stop "Skjermvette Agent"
-```
-
-```powershell
-sc.exe delete "Skjermvette Agent"
-```
-
-```powershell
-& "C:\Program Files\Skjermvette\Agent\Skjermvette.Agent.Service.exe" forget
-```
+Add `--name <name>` to `pair` to call the device something other than the computer's name. To remove it: `sc.exe stop "Skjermvette Agent"`, `sc.exe delete "Skjermvette Agent"`, then `Skjermvette.Agent.Service.exe forget`.
 
 ## Development
 

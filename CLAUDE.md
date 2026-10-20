@@ -9,7 +9,7 @@ Project root: `C:\dev\Test`. Remote: `github.com/Some-Random-Person/Skjermvette`
 - [`docs/product.md`](docs/product.md): the full product rules. **Read it before changing how time is counted, limited or blocked.**
 - [`README.md`](README.md): what the product does, installation and the development commands. Keep it in step when a command, setting or install step changes.
 - [`docs/plan.md`](docs/plan.md): Phase 1 status, what's left (Windows agent, browser extension, deploy files), the rules agents must follow, and later phases. Update its status table when a step is done.
-- `src/Skjermvette.Server/CLAUDE.md` (server, database, auth, device API), `src/Skjermvette.Agent.Service/CLAUDE.md` (Windows agent service), `src/Skjermvette.Agent.Helper/CLAUDE.md` (its user-session Helper), `web/CLAUDE.md` (dashboard), `tools/FakeDevice/CLAUDE.md` and `deploy/CLAUDE.md` (Docker files). These load automatically when working in those folders. When a new area starts (e.g. `extension/`), give it its own `CLAUDE.md`.
+- `src/Skjermvette.Server/CLAUDE.md` (server, database, auth, device API), `src/Skjermvette.Agent.Service/CLAUDE.md` (Windows agent service), `src/Skjermvette.Agent.Helper/CLAUDE.md` (its user-session Helper), `web/CLAUDE.md` (dashboard), `tools/FakeDevice/CLAUDE.md`, `deploy/CLAUDE.md` (Docker files) and `installer/CLAUDE.md` (Windows installer). These load automatically when working in those folders. When a new area starts (e.g. `extension/`), give it its own `CLAUDE.md`.
 
 ## Product in short
 A parental screen-time manager: **one shared daily budget across all of a child's devices**, with a daily total, per-app limits and exempt apps. Rules that are easy to break by accident:
@@ -57,6 +57,7 @@ A parental screen-time manager: **one shared daily budget across all of a child'
   - `src/Skjermvette.Agent.Helper`: the Windows agent's WinForms Helper in the child's session (foreground tracking)
   - `tests/Skjermvette.Core.Tests`, `tests/Skjermvette.Server.Tests`, `tests/Skjermvette.Agent.Tests` (xUnit; Service and Helper; the agent tests use the server tests' `ServerFactory`)
   - `tools/FakeDevice`: a fake device for testing across devices
+  - `installer/Skjermvette.Agent.Installer.wixproj`: the Windows agent's MSI (WiX). Not in the solution, so tests don't publish it; build it with `dotnet build installer -c Release`
 - **Code style:**
   - Nullable and ImplicitUsings on. File-scoped namespaces, one type per file, namespaces matching project names.
   - Async methods end in `Async`. Private fields use `_camelCase`. Comments are sparse.
@@ -74,6 +75,7 @@ A parental screen-time manager: **one shared daily budget across all of a child'
   - `MailKit` (server email, #27), with `System.Security.Cryptography.Pkcs` pinned to a patched version
   - `QRCoder` (server, the authenticator app QR code, #33)
   - `System.Security.Cryptography.ProtectedData` (Windows agent, DPAPI for the device token)
+  - WiX Toolset **v5** (`WixToolset.Sdk`, `WixToolset.UI.wixext`, `WixToolset.Util.wixext`, 5.0.x) for the installer. Not v6 or later: those come under the paid Open Source Maintenance Fee licence
   - Anything else: ask first.
 
 ## Unconfirmed defaults
