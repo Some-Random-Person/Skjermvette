@@ -8,8 +8,8 @@ namespace Skjermvette.Agent.Helper;
 /// <summary>
 /// Runs in the child's session with no window: samples what is in use (the program in front and any making sound) every
 /// second, and straight away when another window comes to the front, and sends it to the Service. A browser counts as the
-/// websites the browser extension reports. Shows the Service's
-/// notices: warnings before time runs out, and a full screen when a program was closed.
+/// websites the browser extension reports. Shows the Service's notices: warnings before time runs out, and a full screen
+/// when a program was closed.
 /// </summary>
 public sealed class HelperContext : ApplicationContext
 {
