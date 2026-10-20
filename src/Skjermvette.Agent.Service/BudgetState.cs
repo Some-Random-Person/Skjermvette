@@ -17,7 +17,17 @@ public sealed class BudgetState(ILogger<BudgetState> logger)
     /// <summary>Maps what is in use to the family's apps. Null until the catalog is first read.</summary>
     public AppResolver? Apps { get; private set; }
 
-    public void SetCatalog(IReadOnlyList<LogicalApp> catalog) => Apps = new AppResolver(catalog);
+    /// <summary>The family's apps, which <see cref="Apps"/> resolves against. Empty until first read.</summary>
+    public IReadOnlyList<LogicalApp> Catalog { get; private set; } = [];
+
+    /// <summary>The server's host name, so the dashboard's website is never blocked. Null until the device's identity is loaded.</summary>
+    public string? Dashboard { get; set; }
+
+    public void SetCatalog(IReadOnlyList<LogicalApp> catalog)
+    {
+        Catalog = catalog;
+        Apps = new AppResolver(catalog);
+    }
 
     public void Set(ConnectionEnum connection, BudgetSnapshot? snapshot)
     {

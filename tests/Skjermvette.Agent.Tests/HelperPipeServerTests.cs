@@ -78,6 +78,25 @@ public sealed class HelperPipeServerTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task WebsitesToBlock_ReachTheHelper()
+    {
+        _state.SetCatalog([new LogicalApp(Guid.NewGuid(), "YouTube", [new AppMatcher(MatcherKindEnum.Domain, "youtube.com")])]);
+        _state.Set(ConnectionEnum.Online, new BudgetSnapshot(TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, [], []));
+        WebsiteBlocks? received = null;
+        using var sender = new PipeSender(_pipeName, websites => received = websites);
+
+        var deadline = DateTime.UtcNow + Timeout;
+        while (received is null && DateTime.UtcNow < deadline)
+        {
+            sender.Send([Chrome]);
+            await Task.Delay(100);
+        }
+
+        Assert.True(received!.BlockOthers);
+        Assert.Equal([new BlockedWebsite("youtube.com", null)], received.Blocked);
+    }
+
+    [Fact]
     public async Task SomethingThatIsntASample_DisconnectsTheClient()
     {
         Assert.True(await DisconnectedAsync(Encoding.UTF8.GetBytes("not a sample")));

@@ -8,7 +8,7 @@ namespace Skjermvette.Agent.Service;
 
 /// <summary>
 /// Receives what is in use from the Helper (<see cref="HelperPipe"/>) and feeds it to the <see cref="UsageTracker"/>,
-/// stamped with this service's clock, and to the <see cref="Enforcer"/>, whose notices go back to the Helper. Only SYSTEM and the user signed in at the computer can open the pipe; when that
+/// stamped with this service's clock, and to the <see cref="Enforcer"/>, whose notices and blocked websites go back to the Helper. Only SYSTEM and the user signed in at the computer can open the pipe; when that
 /// user changes, the pipe is closed and opened again for the new one. Only the Helper the Service started is taken
 /// (<see cref="HelperProcess"/>). One Helper at a time: a new connection replaces the previous one.
 /// </summary>
@@ -134,6 +134,7 @@ public sealed class HelperPipeServer(UsageTracker tracker, Enforcer enforcer, He
         await using var _ = pipe;
         logger.LogInformation("Helper connected.");
         var buffer = new byte[HelperPipe.MaxMessageBytes];
+        byte[] websitesSent = [];
         try
         {
             while (true)
@@ -148,7 +149,15 @@ public sealed class HelperPipeServer(UsageTracker tracker, Enforcer enforcer, He
                 }
                 tracker.Observe(time.GetUtcNow(), inUse);
                 foreach (var notice in enforcer.Check(inUse))
-                    await pipe.WriteAsync(HelperPipe.EncodeNotice(notice), ct);
+                    await pipe.WriteAsync(HelperPipe.EncodeMessage(new HelperMessage(notice)), ct);
+
+                // Checked on every sample like the programs, but only sent when they've changed.
+                var websites = HelperPipe.EncodeMessage(new HelperMessage(Websites: enforcer.Websites()));
+                if (!websites.AsSpan().SequenceEqual(websitesSent))
+                {
+                    await pipe.WriteAsync(websites, ct);
+                    websitesSent = websites;
+                }
             }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)

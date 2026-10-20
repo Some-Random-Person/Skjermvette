@@ -9,7 +9,7 @@ public static class Program
     public static int Main(string[] args)
     {
         if (BrowserHost.StartedByBrowser(args))
-            return BrowserHost.RunAsync(Console.OpenStandardInput(), BrowserPipe.Name(Process.GetCurrentProcess().SessionId)).GetAwaiter().GetResult();
+            return BrowserHost.RunAsync(Console.OpenStandardInput(), Console.OpenStandardOutput(), BrowserPipe.Name(Process.GetCurrentProcess().SessionId)).GetAwaiter().GetResult();
 
         // One Helper per session when started by hand. The Service keeps one per session itself, and any program could
         // take the mutex first to keep the Helper from starting.

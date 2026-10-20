@@ -6,7 +6,7 @@ Loaded when working in `extension/`. General rules are in the root `CLAUDE.md`; 
 - Manifest V3, TypeScript compiled by plain `tsc` to ES modules (no bundler). Chrome and Edge (120+); Firefox later.
 - `src/` is compiled into `dist/`, and `static/` (the manifest) is copied there by `npm run build`. Load `dist/` unpacked.
 - **npm packages (approved, dev only):** `typescript`, `@types/chrome`, `eslint` 9, `@eslint/js`, `typescript-eslint`, `prettier`. Anything else: ask first.
-- Checks: **`npm run check`** (types, lint, formatting), the same Prettier settings as `web/`. No tests yet; keep logic that needs no browser in `report.ts`.
+- Checks: **`npm run check`** (types, lint, formatting), the same Prettier settings as `web/`. No tests yet; keep logic that needs no browser in `report.ts` and `blocking.ts`.
 
 ## How it reaches the agent
 - **Native messaging** host `no.skjermvette.agent`: the Helper's own program (`BrowserHost` in the Helper), which the browser starts and which passes each message on to the Helper running in that session (`BrowserPipe`). See the Helper's `CLAUDE.md`.
@@ -20,6 +20,14 @@ Loaded when working in `extension/`. General rules are in the root `CLAUDE.md`; 
 - Sent when any of these changes (tab switched, navigated, closed, sound started or stopped, window focus), and again after connecting.
 - Host names must match `^[a-z0-9.-]{1,253}$` (IPv6 addresses don't); the Helper refuses a report with anything else.
 
+## Blocking (`WebsiteBlocks`, the same shape as in Core)
+- The agent's Service works out which websites are blocked (`WebsiteBlocks.For` in Core, by the same rules as closing programs) and sends the list through the Helper and the host when the extension connects and whenever it changes.
+- `blocked`: domains whose app is used up, each with the app's name when its own limit ran out (null for the daily total). `allowed`: domains of apps that aren't (exempt apps, apps with time left) and the dashboard. `blockOthers`: the daily total is used up, so any other website is blocked too.
+- A domain includes its subdomains and the most specific one wins, as in the agent's `AppResolver`: one `declarativeNetRequest` dynamic rule per domain, with priority = number of labels + 1 (an allow rule wins a tie), plus a catch-all at priority 1 for `blockOthers`. `blockedPathFor` makes the same decision for tabs already open.
+- Only pages (`main_frame`) are redirected, to `blocked.html` (`?app=` names the app), not what pages load, so exempt sites keep working.
+- When a new list arrives, open tabs on a blocked website, including ones playing in the background, are moved to the blocked page.
+- **The browser keeps the dynamic rules**, so the last list stays in force while the agent can't be reached and after a restart (decided by the user on 2026-10-20, instead of blocking everything). A list that isn't valid is ignored.
+- The blocked page is in `web_accessible_resources`, so websites can tell the extension is installed.
+
 ## Not done yet
-- Blocking used-up websites (`declarativeNetRequest` redirects to a local "blocked" page) and failing closed when the agent can't be reached.
 - Force-installing it and turning off private windows through browser policies (the Service). Outside a domain or device management, Chrome and Edge probably only force-install extensions from their own stores; not checked yet.
