@@ -51,8 +51,9 @@ public sealed class HelperContext : ApplicationContext
         var foreground = NativeMethods.ForegroundProcessPath();
         if (string.Equals(foreground, Environment.ProcessPath, StringComparison.OrdinalIgnoreCase))
             foreground = null;
-        var inUse = Sampler.InUse(foreground, audio, sinceLastInput, _sessionActive, _browsers.Reports());
-        _sender.Send(inUse);
+        var browsers = _browsers.Reports();
+        var inUse = Sampler.InUse(foreground, audio, sinceLastInput, _sessionActive, browsers);
+        _sender.Send(inUse, browsers.Select(b => b.Browser).Distinct().ToArray());
 
         var described = inUse.Length == 0 ? "nothing" : string.Join(", ", inUse.Select(k => k.Identifier));
         if (described != _last)

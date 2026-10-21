@@ -10,23 +10,29 @@ public class HelperPipeTests
     {
         UsageKey[] inUse = [new(MatcherKindEnum.Process, "chrome.exe"), new(MatcherKindEnum.Domain, "youtube.com")];
 
-        Assert.Equal(inUse, HelperPipe.Decode(HelperPipe.Encode(inUse)));
+        var sample = HelperPipe.Decode(HelperPipe.Encode(new HelperSample(inUse, ["chrome.exe"])))!;
+
+        Assert.Equal(inUse, sample.InUse);
+        Assert.Equal(["chrome.exe"], sample.Browsers);
     }
 
     [Fact]
     public void EmptySample_MeansNothingInUse()
     {
-        Assert.Empty(HelperPipe.Decode(HelperPipe.Encode([]))!);
+        Assert.Empty(HelperPipe.Decode(HelperPipe.Encode(new HelperSample([], [])))!.InUse);
     }
 
     [Theory]
     [InlineData("not json")]
     [InlineData("null")]
-    [InlineData("[null]")]
-    [InlineData("""[{"kind":"Process","identifier":""}]""")]
-    [InlineData("""[{"kind":"Process"}]""")]
-    [InlineData("""[{"kind":"Nonsense","identifier":"chrome.exe"}]""")]
-    [InlineData("""[{"kind":99,"identifier":"chrome.exe"}]""")]
+    [InlineData("[]")]
+    [InlineData("""{"inUse":[]}""")]
+    [InlineData("""{"inUse":[null],"browsers":[]}""")]
+    [InlineData("""{"inUse":[{"kind":"Process","identifier":""}],"browsers":[]}""")]
+    [InlineData("""{"inUse":[{"kind":"Process"}],"browsers":[]}""")]
+    [InlineData("""{"inUse":[{"kind":"Nonsense","identifier":"chrome.exe"}],"browsers":[]}""")]
+    [InlineData("""{"inUse":[{"kind":99,"identifier":"chrome.exe"}],"browsers":[]}""")]
+    [InlineData("""{"inUse":[],"browsers":[""]}""")]
     public void InvalidSamples_AreRefused(string message)
     {
         Assert.Null(HelperPipe.Decode(Encoding.UTF8.GetBytes(message)));
@@ -74,7 +80,7 @@ public class HelperPipeTests
         var tooMany = Enumerable.Range(0, HelperPipe.MaxKeys + 1).Select(i => new UsageKey(MatcherKindEnum.Process, $"{i}.exe")).ToArray();
         UsageKey[] tooLong = [new(MatcherKindEnum.Domain, new string('a', HelperPipe.MaxIdentifierLength + 1))];
 
-        Assert.Null(HelperPipe.Decode(HelperPipe.Encode(tooMany)));
-        Assert.Null(HelperPipe.Decode(HelperPipe.Encode(tooLong)));
+        Assert.Null(HelperPipe.Decode(HelperPipe.Encode(new HelperSample(tooMany, []))));
+        Assert.Null(HelperPipe.Decode(HelperPipe.Encode(new HelperSample(tooLong, []))));
     }
 }

@@ -58,6 +58,19 @@ public class EnforcerTests
     }
 
     [Fact]
+    public void ABrowserWithItsExtensionConnected_IsNeverClosed()
+    {
+        SetBudget(total: 0, youTube: 30);
+        UsageKey edge = new(MatcherKindEnum.Process, "msedge.exe");
+
+        Assert.Empty(_enforcer.Check([edge], ["msedge.exe"]));
+        Assert.Empty(_closed);
+
+        _enforcer.Check([edge]);
+        Assert.Equal(["msedge.exe"], _closed);
+    }
+
+    [Fact]
     public void NothingClosed_NoNotice()
     {
         SetBudget(total: 0, youTube: 30);
