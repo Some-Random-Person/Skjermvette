@@ -85,7 +85,7 @@ These are implemented on the server and in Core; an agent only has to report and
    - the child uses a standard (non-admin) account;
    - the Service runs as SYSTEM and restarts the Helper;
    - the extension is force-installed and private windows are disabled;
-   - browsers without the extension (e.g. portable ones) are closed;
+   - browsers without the extension (e.g. portable ones) aren't closed for that alone, since the browser must run to get the extension; they count as their own program (toward the total, not their websites' apps);
    - uninstalling needs a parent PIN that the server checks.
 
    A device that goes silent shows as offline in the dashboard.
