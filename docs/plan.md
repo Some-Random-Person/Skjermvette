@@ -30,7 +30,7 @@ In production the server runs in Docker with Postgres, behind a **Cloudflare Tun
 | 2 | Server: EF Core, parent auth, pairing, device API, SignalR, offline allowance | Done (#5, then #20, #23, #26, #32, #35) |
 | 3 | FakeDevice tool | Done (#14, #21) |
 | 4 | **Windows agent**: Service + Helper | **In progress.** Done: the Service's sync loop (pairing, token, outbox, offline allowance, live updates, unpairing); the Helper's foreground, audio and idle tracking, sent to the Service over a named pipe; enforcement: warnings at 5 and 1 min, closing programs in use whose time is up, and the full-screen notice; the Service starting the Helper in the signed-in user's session and restarting it, at High integrity so the child can't close it, with the pipe taking samples only from that Helper (#60; tried installed as SYSTEM). An MSI installer (`installer/`, WiX v5, self-contained) that installs both, registers the service and pairs from its own dialog; tried against the dev server: silently (wrong code, install, uninstall) and through the dialog, an upgrade and Settings → Apps. Browser policies wait for the extension (step 5) |
-| 5 | **Browser extension** + native messaging host registration | **In progress.** Done: the extension reports the active tab's website and tabs making sound through the Helper (native messaging host in the Helper's program), and the Helper counts a browser as those websites; registered for development by a script. To do: blocking, failing closed, registration in the installer, browser policies |
+| 5 | **Browser extension** + native messaging host registration | **In progress.** Done: the extension reports the active tab's website and tabs making sound through the Helper (native messaging host in the Helper's program), and the Helper counts a browser as those websites; registered for development by a script. Blocking: the Service works out which websites are used up, by the same rules as programs, and sends the list through the Helper and the host; the extension redirects them, and tabs already open on them, to its own "time's up" page, and keeps the last list while the agent can't be reached. To do: registration in the installer, browser policies |
 | 6 | Parent dashboard | Done, moved ahead of 4–5 (#9, then #12, #13, #24, #25, #26) |
 | 7 | **Deploy files** (`deploy/docker-compose.yml`, self-hosting README) | Done with #6 (forwarded headers and `Secure` cookies behind the tunnel), but **not yet run**: the dev machine has no Docker. Check on the real server that it builds and starts, and that the client address arrives (README → Server and dashboard) |
 
@@ -67,11 +67,9 @@ In production the server runs in Docker with Postgres, behind a **Cloudflare Tun
     - sets Edge/Chrome policies in the registry: force-install the extension, disable InPrivate/Incognito, block developer mode.
 - `src/Skjermvette.Agent.Helper/` (the rest): small WinForms app in the child's session. It's needed because a SYSTEM service can't see the foreground window or show UI.
   - A tray icon showing the time left (the warnings and the full-screen "time's up" notice are done).
-- `extension/` (part): Manifest V3, TypeScript (plain `tsc`); Chrome and Edge first, Firefox later. Reporting the active tab's website and tabs making sound to the Helper is done (see its `CLAUDE.md`).
-  - Receives what to block from the Service, through the Helper and the host. **Until then, a website whose time is up isn't stopped:** with the extension connected, a browser counts as its websites, and the Service can't close a website.
+- `extension/` (part): Manifest V3, TypeScript (plain `tsc`); Chrome and Edge first, Firefox later. Reporting the active tab's website and tabs making sound to the Helper, and blocking used-up websites, are done (see its `CLAUDE.md`).
   - The installer registers the native messaging host for every user (`HKLM`), next to the browser policies.
-  - Blocks used-up domains with `declarativeNetRequest` dynamic redirect rules to a local "blocked" page.
-  - **Fails closed:** if native messaging isn't working, it blocks everything except an allowlist.
+  - **While the agent can't be reached, it keeps the last list it was sent** (decided by the user on 2026-10-20, instead of blocking everything): nothing new is blocked until the agent is back.
 
 ## Rules the agents must follow
 These are implemented on the server and in Core; an agent only has to report and enforce correctly.
@@ -87,7 +85,7 @@ These are implemented on the server and in Core; an agent only has to report and
    - the child uses a standard (non-admin) account;
    - the Service runs as SYSTEM and restarts the Helper;
    - the extension is force-installed and private windows are disabled;
-   - browsers without the extension (e.g. portable ones) are closed;
+   - browsers without the extension (e.g. portable ones) aren't closed for that alone, since the browser must run to get the extension; they count as their own program (toward the total, not their websites' apps);
    - uninstalling needs a parent PIN that the server checks.
 
    A device that goes silent shows as offline in the dashboard.

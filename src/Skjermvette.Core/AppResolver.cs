@@ -42,7 +42,8 @@ public sealed class AppResolver
         _ => value.Trim().ToLowerInvariant(),
     };
 
-    private static string NormalizeDomain(string value) => value.Trim().TrimEnd('.').ToLowerInvariant();
+    /// <summary>A domain as it's matched: lowercase, without a trailing dot.</summary>
+    public static string NormalizeDomain(string value) => value.Trim().TrimEnd('.').ToLowerInvariant();
 
     private static string ParentDomain(string host)
     {

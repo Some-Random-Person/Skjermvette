@@ -38,6 +38,7 @@ public sealed class DeviceSync : IAsyncDisposable
         _cachePath = Path.Combine(folder, "budget.json");
         _tracker = tracker;
         _state = state;
+        _state.Dashboard = identity.Server.IdnHost;
         _time = time;
         _logger = logger;
         _client = new ServerClient(identity, createHandler);

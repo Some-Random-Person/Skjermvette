@@ -53,4 +53,5 @@ How Skjermvette behaves, in detail. Read this before changing anything that affe
 ## Tamper resistance (Windows)
 - The child uses a standard account. The agent runs as a SYSTEM service and watches the user-session helper.
 - The browser extension is force-installed by policy, and InPrivate/Incognito is disabled.
-- Browsers without the extension are closed. Uninstalling needs a parent PIN.
+- Browsers without the extension are **not** closed for that reason alone: the browser has to run to get the extension installed (decided by the user on 2026-10-21). A browser without it counts as its own program, so it still counts toward the daily total and is closed once the total is used up, but its websites don't count toward their apps' limits.
+- Uninstalling needs a parent PIN.
