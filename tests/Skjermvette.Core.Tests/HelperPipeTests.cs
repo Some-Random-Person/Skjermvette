@@ -35,21 +35,37 @@ public class HelperPipeTests
     [Fact]
     public void Notice_RoundTripsOnOneLine()
     {
-        var notice = new HelperNotice(HelperNoticeEnum.Warning, "You\nTube", 5);
+        var message = new HelperMessage(new HelperNotice(HelperNoticeEnum.Warning, "You\nTube", 5));
 
-        var line = Encoding.UTF8.GetString(HelperPipe.EncodeNotice(notice));
+        var line = Encoding.UTF8.GetString(HelperPipe.EncodeMessage(message));
 
         Assert.Equal(line.Length - 1, line.IndexOf('\n'));
-        Assert.Equal(notice, HelperPipe.DecodeNotice(line.TrimEnd('\n')));
+        Assert.Equal(message, HelperPipe.DecodeMessage(line.TrimEnd('\n')));
+    }
+
+    [Fact]
+    public void Websites_RoundTrip()
+    {
+        var websites = new WebsiteBlocks(true, [new BlockedWebsite("youtube.com", "YouTube")], ["teams.microsoft.com"]);
+
+        var decoded = HelperPipe.DecodeMessage(Encoding.UTF8.GetString(HelperPipe.EncodeMessage(new HelperMessage(Websites: websites))));
+
+        Assert.True(decoded!.Websites!.BlockOthers);
+        Assert.Equal(websites.Blocked, decoded.Websites.Blocked);
+        Assert.Equal(websites.Allowed, decoded.Websites.Allowed);
     }
 
     [Theory]
     [InlineData("not json")]
     [InlineData("null")]
-    [InlineData("""{"kind":99,"app":null,"minutes":0}""")]
-    public void InvalidNotices_AreIgnored(string line)
+    [InlineData("{}")]
+    [InlineData("""{"notice":{"kind":99,"app":null,"minutes":0}}""")]
+    [InlineData("""{"notice":{"kind":"Warning","app":null,"minutes":1},"websites":{"blockOthers":false,"blocked":[],"allowed":[]}}""")]
+    [InlineData("""{"websites":{"blockOthers":false,"blocked":[null],"allowed":[]}}""")]
+    [InlineData("""{"websites":{"blockOthers":false,"blocked":[]}}""")]
+    public void InvalidMessages_AreIgnored(string line)
     {
-        Assert.Null(HelperPipe.DecodeNotice(line));
+        Assert.Null(HelperPipe.DecodeMessage(line));
     }
 
     [Fact]

@@ -44,8 +44,7 @@ public sealed class Enforcer(BudgetState state, ILogger<Enforcer> logger, Func<s
                 continue;
 
             // The app's own limit, unless the total runs out first.
-            var own = app is null ? null : snapshot.Apps.FirstOrDefault(a => a.AppId == app.Id);
-            var limitedBy = own is not null && own.Remaining < snapshot.TotalRemaining ? app : null;
+            var limitedBy = app is not null && snapshot.OwnLimitFirst(app.Id) ? app : null;
 
             if (remaining > TimeSpan.Zero)
             {
@@ -73,6 +72,9 @@ public sealed class Enforcer(BudgetState state, ILogger<Enforcer> logger, Func<s
             _warned.Add((app?.Id, at));
         return new HelperNotice(HelperNoticeEnum.Warning, app?.Name, (int)Math.Ceiling(remaining.TotalMinutes));
     }
+
+    /// <summary>The websites the browser extension blocks now. Websites can't be closed here, so the extension blocks them instead.</summary>
+    public WebsiteBlocks Websites() => WebsiteBlocks.For(state.Snapshot, state.Catalog, state.Dashboard);
 
     /// <summary>Closes every process with a program name in a session and returns how many it closed.</summary>
     public static int CloseProcesses(string program, int? session)

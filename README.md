@@ -66,7 +66,7 @@ Child devices ──HTTPS + SignalR (device token)──────┘
 | `tests/` | xUnit tests for Core, the server and the Windows agent | Done |
 | `tools/FakeDevice` | Pretends to be a phone or PC, for testing across devices | Done |
 | `installer/` | Windows installer (WiX) for the Service and Helper, with pairing | Done |
-| `extension/` | Chrome/Edge (Manifest V3) extension: counts websites toward their app | Started: reports tabs; blocking to do |
+| `extension/` | Chrome/Edge (Manifest V3) extension: counts websites toward their app and blocks them when their time is up | Works in development; not installed by the installer yet |
 | `deploy/` | `docker-compose.yml` (server, Postgres) for self-hosting behind a Cloudflare Tunnel | Written, not yet run on a real server |
 
 [docs/plan.md](docs/plan.md) has the detailed status, and [docs/product.md](docs/product.md) the full product rules.
@@ -81,7 +81,7 @@ Child devices ──HTTPS + SignalR (device token)──────┘
 
 ## Installation
 
-> **Not ready for real use yet.** There's no browser extension yet, so websites aren't counted or blocked on Windows, and the Windows installer isn't signed. To try everything on one computer, follow [Development](#development) instead.
+> **Not ready for real use yet.** The installer doesn't set up the browser extension yet, so websites aren't counted or blocked on children's PCs, and the Windows installer isn't signed. To try everything on one computer, follow [Development](#development) instead.
 
 ### Server and dashboard
 
@@ -341,7 +341,7 @@ Stop both with Ctrl+C. To pair again, run `dotnet run --project src/Skjermvette.
 
 ### Browser extension
 
-The extension tells the Helper which website is in front and which tabs are making sound, so youtube.com in a browser counts as YouTube. Build it:
+The extension tells the Helper which website is in front and which tabs are making sound, so youtube.com in a browser counts as YouTube. When a website's time is up, the Service sends it to the extension (through the Helper), which shows a "time's up" page instead, also in tabs already open on it. When the daily total is used up, every website is blocked except exempt apps' and the dashboard. Build it:
 
 ```bash
 npm ci --prefix extension
@@ -358,6 +358,8 @@ powershell -ExecutionPolicy Bypass -File extension/register-host.ps1
 ```
 
 Then open `edge://extensions` (or `chrome://extensions`), turn on developer mode, choose **Load unpacked** and pick `extension/dist`. With the Helper running in a console, switching tabs shows the website in its output (e.g. `In use: www.youtube.com`). After changing the extension, build it again and press its reload button.
+
+The extension keeps the last list of blocked websites it was sent, also while the agent isn't running and after the browser restarts. To unblock a test browser, give the child more time while the agent runs, or remove the extension.
 
 ## How AI is used in this project
 

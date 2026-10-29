@@ -24,4 +24,7 @@ public sealed record BudgetSnapshot(
     }
 
     public bool IsBlocked(Guid? appId) => Remaining(appId) is { } remaining && remaining <= TimeSpan.Zero;
+
+    /// <summary>True when the app's own limit runs out before the daily total, so the app is what to name to the child.</summary>
+    public bool OwnLimitFirst(Guid appId) => Apps.FirstOrDefault(a => a.AppId == appId) is { } app && app.Remaining < TotalRemaining;
 }

@@ -8,8 +8,9 @@ namespace Skjermvette.Agent.Helper;
 
 /// <summary>
 /// Sends samples to the Service over its pipe (<see cref="HelperPipe"/>), connecting again whenever the connection is lost,
-/// and receives the Service's notices. Only the latest sample waits to be sent; older ones are dropped.
+/// and receives the Service's notices and the websites to block. Only the latest sample waits to be sent; older ones are dropped.
 /// </summary>
+/// <param name="onWebsites">Called with the websites the browser extension should block, whenever the Service sends them.</param>
 public sealed class PipeSender : IDisposable
 {
     public static readonly TimeSpan RetryAfter = TimeSpan.FromSeconds(2);
@@ -24,8 +25,11 @@ public sealed class PipeSender : IDisposable
     private readonly CancellationTokenSource _stop = new();
     private readonly Task _loop;
 
-    public PipeSender(string pipeName = HelperPipe.Name)
+    private readonly Action<WebsiteBlocks> _onWebsites;
+
+    public PipeSender(string pipeName = HelperPipe.Name, Action<WebsiteBlocks>? onWebsites = null)
     {
+        _onWebsites = onWebsites ?? (_ => { });
         _loop = Task.Run(() => RunAsync(pipeName, _stop.Token));
     }
 
@@ -79,8 +83,15 @@ public sealed class PipeSender : IDisposable
             using var reader = new StreamReader(pipe, leaveOpen: true);
             while (await reader.ReadLineAsync(ct) is { } line)
             {
-                if (HelperPipe.DecodeNotice(line) is { } notice)
-                    _notices.Writer.TryWrite(notice);
+                switch (HelperPipe.DecodeMessage(line))
+                {
+                    case { Notice: { } notice }:
+                        _notices.Writer.TryWrite(notice);
+                        break;
+                    case { Websites: { } websites }:
+                        _onWebsites(websites);
+                        break;
+                }
             }
         }
         catch (Exception e) when (e is IOException or OperationCanceledException)

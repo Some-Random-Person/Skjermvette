@@ -8,13 +8,13 @@ namespace Skjermvette.Agent.Helper;
 /// <summary>
 /// Runs in the child's session with no window: samples what is in use (the program in front and any making sound) every
 /// second, and straight away when another window comes to the front, and sends it to the Service. A browser counts as the
-/// websites the browser extension reports. Shows the Service's notices: warnings before time runs out, and a full screen
-/// when a program was closed.
+/// websites the browser extension reports, and the extension is told which websites to block. Shows the Service's notices:
+/// warnings before time runs out, and a full screen when a program was closed.
 /// </summary>
 public sealed class HelperContext : ApplicationContext
 {
-    private readonly PipeSender _sender = new();
     private readonly BrowserPipeServer _browsers = new(BrowserPipe.Name(Process.GetCurrentProcess().SessionId));
+    private readonly PipeSender _sender;
     private readonly AudioSessions _audio = new();
     private readonly RecentlyHeard _heard = new();
     private readonly System.Windows.Forms.Timer _timer = new() { Interval = 1000 };
@@ -28,6 +28,7 @@ public sealed class HelperContext : ApplicationContext
 
     public HelperContext()
     {
+        _sender = new PipeSender(onWebsites: _browsers.Block);
         _onForeground = (_, _, _, _, _, _, _) => Sample();
         _hook = NativeMethods.SetWinEventHook(NativeMethods.EventSystemForeground, NativeMethods.EventSystemForeground, IntPtr.Zero,
             _onForeground, 0, 0, NativeMethods.WinEventOutOfContext);
