@@ -108,7 +108,7 @@ public sealed class HelperPipeServerTests : IAsyncLifetime
     {
         _helper.Started(Environment.ProcessId + 1);
 
-        Assert.True(await DisconnectedAsync(HelperPipe.Encode([])));
+        Assert.True(await DisconnectedAsync(HelperPipe.Encode(new HelperSample([], []))));
         Assert.Empty(_tracker.Flush(_clock.Now));
     }
 
@@ -117,7 +117,7 @@ public sealed class HelperPipeServerTests : IAsyncLifetime
     {
         _helper.Stopped();
 
-        Assert.True(await DisconnectedAsync(HelperPipe.Encode([Chrome])));
+        Assert.True(await DisconnectedAsync(HelperPipe.Encode(new HelperSample([Chrome], []))));
         Assert.Empty(_tracker.Flush(_clock.Now));
     }
 

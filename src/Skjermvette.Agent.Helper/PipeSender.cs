@@ -18,8 +18,8 @@ public sealed class PipeSender : IDisposable
     /// <summary>Exactly what the Service grants the user (<c>HelperPipeServer.ClientRights</c>), so the connection isn't refused.</summary>
     private const PipeAccessRights Rights = PipeAccessRights.ReadData | PipeAccessRights.WriteData | PipeAccessRights.ReadAttributes | PipeAccessRights.Synchronize;
 
-    private readonly Channel<UsageKey[]> _samples =
-        Channel.CreateBounded<UsageKey[]>(new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.DropOldest });
+    private readonly Channel<HelperSample> _samples =
+        Channel.CreateBounded<HelperSample>(new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.DropOldest });
     private readonly Channel<HelperNotice> _notices =
         Channel.CreateBounded<HelperNotice>(new BoundedChannelOptions(16) { FullMode = BoundedChannelFullMode.DropOldest });
     private readonly CancellationTokenSource _stop = new();
@@ -33,7 +33,8 @@ public sealed class PipeSender : IDisposable
         _loop = Task.Run(() => RunAsync(pipeName, _stop.Token));
     }
 
-    public void Send(UsageKey[] inUse) => _samples.Writer.TryWrite(inUse);
+    /// <param name="browsers">The browser programs whose extension is connected.</param>
+    public void Send(UsageKey[] inUse, string[]? browsers = null) => _samples.Writer.TryWrite(new HelperSample(inUse, browsers ?? []));
 
     /// <summary>The next notice from the Service, if one has arrived.</summary>
     public bool TryReceive(out HelperNotice notice) => _notices.Reader.TryRead(out notice!);
@@ -54,8 +55,8 @@ public sealed class PipeSender : IDisposable
                     var receiving = ReceiveAsync(pipe, connected.Token);
                     try
                     {
-                        await foreach (var inUse in _samples.Reader.ReadAllAsync(ct))
-                            await pipe.WriteAsync(HelperPipe.Encode(inUse), ct);
+                        await foreach (var sample in _samples.Reader.ReadAllAsync(ct))
+                            await pipe.WriteAsync(HelperPipe.Encode(sample), ct);
                     }
                     finally
                     {

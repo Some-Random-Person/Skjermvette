@@ -6,7 +6,7 @@ namespace Skjermvette.Core;
 
 /// <summary>
 /// What the Windows agent's Helper sends the Service over a named pipe, about once a second: one message per sample,
-/// holding everything in use right now as a JSON array of <see cref="UsageKey"/>. An empty array means nothing is in use.
+/// as a JSON <see cref="HelperSample"/>: everything in use right now, and the browsers whose extension is connected.
 /// The Service answers on the same pipe with <see cref="HelperMessage"/>s, one JSON object per line.
 /// </summary>
 public static class HelperPipe
@@ -24,25 +24,28 @@ public static class HelperPipe
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { Converters = { new JsonStringEnumConverter() } };
 
-    public static byte[] Encode(IReadOnlyCollection<UsageKey> inUse) => JsonSerializer.SerializeToUtf8Bytes(inUse, Json);
+    public static byte[] Encode(HelperSample sample) => JsonSerializer.SerializeToUtf8Bytes(sample, Json);
 
     /// <summary>The sample in <paramref name="message"/>, or null if it isn't a valid one.</summary>
-    public static UsageKey[]? Decode(ReadOnlySpan<byte> message)
+    public static HelperSample? Decode(ReadOnlySpan<byte> message)
     {
-        UsageKey[]? keys;
+        HelperSample? sample;
         try
         {
-            keys = JsonSerializer.Deserialize<UsageKey[]>(message, Json);
+            sample = JsonSerializer.Deserialize<HelperSample>(message, Json);
         }
         catch (JsonException)
         {
             return null;
         }
 
-        var valid = keys is { Length: <= MaxKeys } && keys.All(k =>
-            k is not null && Enum.IsDefined(k.Kind) && !string.IsNullOrWhiteSpace(k.Identifier) && k.Identifier.Length <= MaxIdentifierLength);
-        return valid ? keys : null;
+        var valid = sample is { InUse.Length: <= MaxKeys, Browsers.Length: <= MaxKeys }
+            && sample.InUse.All(k => k is not null && Enum.IsDefined(k.Kind) && Valid(k.Identifier))
+            && sample.Browsers.All(Valid);
+        return valid ? sample : null;
     }
+
+    private static bool Valid(string? identifier) => !string.IsNullOrWhiteSpace(identifier) && identifier.Length <= MaxIdentifierLength;
 
     /// <summary>One line: the JSON has no line breaks of its own.</summary>
     public static byte[] EncodeMessage(HelperMessage message) => [.. JsonSerializer.SerializeToUtf8Bytes(message, Json), (byte)'\n'];

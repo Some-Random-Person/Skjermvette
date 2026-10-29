@@ -29,7 +29,12 @@ public sealed class Enforcer(BudgetState state, ILogger<Enforcer> logger, Func<s
     private readonly HashSet<(Guid? App, TimeSpan At)> _warned = [];
 
     /// <summary>What to tell the child about <paramref name="inUse"/>, after closing whatever has run out.</summary>
-    public List<HelperNotice> Check(IReadOnlyCollection<UsageKey> inUse)
+    /// <param name="browsers">
+    /// Browser programs whose extension is connected. They're never closed: the extension blocks their websites, and
+    /// the browser counts as itself on its own pages (a new tab, the blocked page), which would otherwise close it with
+    /// every tab when the daily total is used up.
+    /// </param>
+    public List<HelperNotice> Check(IReadOnlyCollection<UsageKey> inUse, IReadOnlyCollection<string>? browsers = null)
     {
         var notices = new List<HelperNotice>();
         if (state.Snapshot is not { } snapshot)
@@ -51,7 +56,7 @@ public sealed class Enforcer(BudgetState state, ILogger<Enforcer> logger, Func<s
                 if (Warning(limitedBy, remaining) is { } warning)
                     notices.Add(warning);
             }
-            else if (key.Kind == MatcherKindEnum.Process && _close(key.Identifier) > 0)
+            else if (key.Kind == MatcherKindEnum.Process && browsers?.Contains(key.Identifier) != true && _close(key.Identifier) > 0)
             {
                 logger.LogInformation("Closed {Program}: {Reason}.", key.Identifier, limitedBy is null ? "the daily total is used up" : $"{limitedBy.Name} is used up");
                 notices.Add(new HelperNotice(HelperNoticeEnum.Closed, limitedBy?.Name, 0));

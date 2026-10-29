@@ -142,13 +142,13 @@ public sealed class HelperPipeServer(UsageTracker tracker, Enforcer enforcer, He
                 var read = await pipe.ReadAsync(buffer, ct);
                 if (read == 0)
                     break;
-                if (!pipe.IsMessageComplete || HelperPipe.Decode(buffer.AsSpan(0, read)) is not { } inUse)
+                if (!pipe.IsMessageComplete || HelperPipe.Decode(buffer.AsSpan(0, read)) is not { } sample)
                 {
                     logger.LogWarning("The Helper sent something that isn't a sample. Disconnecting it.");
                     break;
                 }
-                tracker.Observe(time.GetUtcNow(), inUse);
-                foreach (var notice in enforcer.Check(inUse))
+                tracker.Observe(time.GetUtcNow(), sample.InUse);
+                foreach (var notice in enforcer.Check(sample.InUse, sample.Browsers))
                     await pipe.WriteAsync(HelperPipe.EncodeMessage(new HelperMessage(notice)), ct);
 
                 // Checked on every sample like the programs, but only sent when they've changed.
