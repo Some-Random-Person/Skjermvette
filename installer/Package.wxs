@@ -36,6 +36,17 @@
         </ServiceInstall>
         <ServiceControl Id="ServiceControl" Name="Skjermvette Agent" Start="install" Stop="both" Remove="uninstall" Wait="yes" />
       </Component>
+      <!-- The extension's native messaging host, for every user. The manifest's path is relative to the manifest. -->
+      <Component Directory="HELPERFOLDER">
+        <File Id="HostManifest" Source="no.skjermvette.agent.json" KeyPath="yes" />
+        <RegistryValue Root="HKLM" Key="SOFTWARE\Google\Chrome\NativeMessagingHosts\no.skjermvette.agent" Type="string" Value="[#HostManifest]" />
+        <RegistryValue Root="HKLM" Key="SOFTWARE\Microsoft\Edge\NativeMessagingHosts\no.skjermvette.agent" Type="string" Value="[#HostManifest]" />
+      </Component>
+      <!-- No private windows: the extension doesn't run in them. -->
+      <Component Directory="INSTALLFOLDER" Id="BrowserPolicies">
+        <RegistryValue Root="HKLM" Key="SOFTWARE\Policies\Google\Chrome" Name="IncognitoModeAvailability" Type="integer" Value="1" KeyPath="yes" />
+        <RegistryValue Root="HKLM" Key="SOFTWARE\Policies\Microsoft\Edge" Name="InPrivateModeAvailability" Type="integer" Value="1" />
+      </Component>
     </Feature>
 
     <!-- Filled in on PairDlg, or on the command line: msiexec /i Skjermvette.Agent.msi SERVER=https://… PAIRCODE=123456 -->

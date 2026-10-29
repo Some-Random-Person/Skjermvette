@@ -1,5 +1,5 @@
 # Registers the Helper as the extension's native messaging host for the current user, in Chrome and Edge, for development.
-# The installer will do this for every user. -Unregister removes it again.
+# The installer does this for every user (HKLM); this one (HKCU) wins over it. -Unregister removes it again.
 param(
     [string]$HelperPath = "$PSScriptRoot\..\src\Skjermvette.Agent.Helper\bin\Debug\net10.0-windows\Skjermvette.Agent.Helper.exe",
     [switch]$Unregister

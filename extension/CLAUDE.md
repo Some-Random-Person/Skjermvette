@@ -10,7 +10,7 @@ Loaded when working in `extension/`. General rules are in the root `CLAUDE.md`; 
 
 ## How it reaches the agent
 - **Native messaging** host `no.skjermvette.agent`: the Helper's own program (`BrowserHost` in the Helper), which the browser starts and which passes each message on to the Helper running in that session (`BrowserPipe`). See the Helper's `CLAUDE.md`.
-- The host only answers the extension id in its manifest's `allowed_origins`. During development the id comes from the `key` in `static/manifest.json` (`dcobicgloeifebalmlahclbcedjnaido`); `register-host.ps1` registers the host for the current user with that id. The stores will give the extension a different id.
+- The host only answers the extension id in its manifest's `allowed_origins`. During development the id comes from the `key` in `static/manifest.json` (`dcobicgloeifebalmlahclbcedjnaido`); `register-host.ps1` registers the host for the current user with that id. The installer registers it for every user (`HKLM`), from `installer/no.skjermvette.agent.json`, which has the same id. The stores will give the extension a different id; add it to both.
 - The browser keeps the service worker running while the port is open. When it isn't connected, it tries again 2 s after a disconnect and on a 30-second alarm.
 
 ## What it reports (`BrowserReport`, the same shape as in the Helper)
@@ -30,4 +30,4 @@ Loaded when working in `extension/`. General rules are in the root `CLAUDE.md`; 
 - The blocked page is in `web_accessible_resources`, so websites can tell the extension is installed.
 
 ## Not done yet
-- Force-installing it and turning off private windows through browser policies (the Service). Outside a domain or device management, Chrome and Edge probably only force-install extensions from their own stores; not checked yet.
+- Force-installing it, and blocking developer mode. On Windows outside an Active Directory or Entra ID domain, Chrome and Edge only force-install extensions from the Chrome Web Store and Edge Add-ons (their policy docs), so it has to be published there first (the user's job). Blocking developer mode before then would turn off the unpacked extension itself (decided by the user on 2026-10-29). The installer already turns off private windows.

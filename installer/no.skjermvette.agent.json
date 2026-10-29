@@ -1,0 +1,7 @@
+{
+  "name": "no.skjermvette.agent",
+  "description": "Skjermvette",
+  "path": "Skjermvette.Agent.Helper.exe",
+  "type": "stdio",
+  "allowed_origins": ["chrome-extension://dcobicgloeifebalmlahclbcedjnaido/"]
+}
