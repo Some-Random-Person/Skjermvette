@@ -66,7 +66,7 @@ Child devices ──HTTPS + SignalR (device token)──────┘
 | `tests/` | xUnit tests for Core, the server and the Windows agent | Done |
 | `tools/FakeDevice` | Pretends to be a phone or PC, for testing across devices | Done |
 | `installer/` | Windows installer (WiX) for the Service and Helper, with pairing | Done |
-| `extension/` | Chrome/Edge (Manifest V3) extension: counts websites toward their app and blocks them when their time is up | Works in development; not installed by the installer yet |
+| `extension/` | Chrome/Edge (Manifest V3) extension: counts websites toward their app and blocks them when their time is up | Works in development; the installer connects it to the agent, but it isn't in the browsers' stores yet |
 | `deploy/` | `docker-compose.yml` (server, Postgres) for self-hosting behind a Cloudflare Tunnel | Written, not yet run on a real server |
 
 [docs/plan.md](docs/plan.md) has the detailed status, and [docs/product.md](docs/product.md) the full product rules.
@@ -81,7 +81,7 @@ Child devices ──HTTPS + SignalR (device token)──────┘
 
 ## Installation
 
-> **Not ready for real use yet.** The installer doesn't set up the browser extension yet, so websites aren't counted or blocked on children's PCs, and the Windows installer isn't signed. To try everything on one computer, follow [Development](#development) instead.
+> **Not ready for real use yet.** The browser extension isn't in the Chrome Web Store or Edge Add-ons yet, so the installer can't install it and websites aren't counted or blocked on children's PCs, and the Windows installer isn't signed. To try everything on one computer, follow [Development](#development) instead.
 
 ### Server and dashboard
 
@@ -199,6 +199,8 @@ msiexec /i Skjermvette.Agent.msi SERVER=https://skjermvette.example.com PAIRCODE
 ```
 
 If the code is wrong or has run out, or the server can't be reached, nothing is installed; make a new code and try again. The device shows as online on the child's Devices tab within about 15 seconds. The programs are in `C:\Program Files\Skjermvette\Agent`, and the device's token is stored encrypted in `%ProgramData%\Skjermvette\Agent`, which only SYSTEM and administrators can open.
+
+The installer also turns off private windows (Incognito in Chrome, InPrivate in Edge) for everyone on the computer, since the extension doesn't run in them, and lets the extension reach the agent. Chrome and Edge then say they're "managed by your organization"; that only means these settings are in force. Uninstalling turns private windows back on.
 
 **To remove it**, uninstall **Skjermvette Agent** in Settings → Apps (as an administrator). That also forgets the pairing on the computer; unpair the device in the dashboard too.
 
